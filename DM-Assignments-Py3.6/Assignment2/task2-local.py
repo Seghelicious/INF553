@@ -133,10 +133,7 @@ def dump_intermediate_file(collected_data, intermediate_file_location):
 
 def write_to_file(candidates, frequent_itemsets):
     with open(output_file, 'w') as file:
-        file.write("Candidates:\n")
-        file.write(candidates + "\n\n")
-        file.write("Frequent Itemsets:\n")
-        file.write(frequent_itemsets)
+        file.write("Candidates:\n" + candidates + "\n\nFrequent Itemsets:\n" + frequent_itemsets)
 
 
 start_time = time.time()

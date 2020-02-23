@@ -39,7 +39,7 @@ object task1 {
     val basketList = basketRdd.collect()
     val basketCount = basketList.length
 
-    val phase1Map = basketRdd.mapPartitions(apriori).flatMap()
+    val phase1Map = basketRdd.mapPartitions(x => apriori(x, support))
 
   }
 
@@ -53,6 +53,42 @@ object task1 {
     }
   }
 
-  def apriori()
+  def apriori(x: Iterator[List[String]], support: Int): Iterator[(List[String], Int)] = {
+//    chunk = list(baskets)
+//    chunk_support = support * (len(chunk) / basket_count)
+//    items = []
+//    for basket in chunk:
+//    for item in basket:
+//      items.append(item)
+//
+//    #frequent itemsets of size 1
+//    frequent_items = filter_by_support(create_count_dict(items, chunk_support), chunk_support, False)
+//    size = 2
+//    while len(frequent_items) != 0:
+//      frequent_items = find_frequent_candidates(chunk, chunk_support, frequent_items, size)
+//    size += 1
+//
+//    return [phase1_candidates]
+
+
+
+    var chunk = scala.collection.mutable.ListBuffer.empty[List[String]]
+    var items = scala.collection.mutable.ListBuffer.empty[String]
+    var singleCount = scala.collection.mutable.HashMap.empty[String, Int]
+
+    //    var returns = scala.collection.mutable.ListBuffer.empty[(List[String], Int)]
+//    val chunkSupport = support.toFloat/p
+
+    while (x.hasNext) {
+      var basket = x.next;
+      chunk += basket
+      for (item <- basket){
+        items += item
+      }
+    }
+
+    // return Iterator[U]
+    Iterator.empty
+  }
 
 }

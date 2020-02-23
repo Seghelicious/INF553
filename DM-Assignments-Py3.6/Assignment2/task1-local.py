@@ -79,6 +79,7 @@ def apriori(baskets):
     while len(frequent_items) != 0:
         frequent_items = find_frequent_candidates(chunk, chunk_support, frequent_items, size)
         size += 1
+
     return [phase1_candidates]
 
 
@@ -104,10 +105,7 @@ def get_output_string(input_tuple, size, output):
     if len(input_tuple) > size:
         output = output[:-1] + "\n\n"
 
-    if len(input_tuple) == 1:
-        output = output + "('" + str(input_tuple[0]) + "'),"
-    else:
-        output = output + str(input_tuple) + ","
+    output = output + "('" + str(input_tuple[0]) + "')," if len(input_tuple) == 1 else output + str(input_tuple) + ","
     return output
 
 
@@ -131,17 +129,14 @@ def get_required_bucket(row, case):
 
 def write_to_file(candidates, frequent_itemsets):
     with open(output_file, 'w') as file:
-        file.write("Candidates:\n")
-        file.write(candidates + "\n\n")
-        file.write("Frequent Itemsets:\n")
-        file.write(frequent_itemsets)
+        file.write("Candidates:\n" + candidates + "\n\nFrequent Itemsets:\n" + frequent_itemsets)
 
 
 start_time = time.time()
 case = 1  # int(sys.argv[1])
-support = 3  # int(sys.argv[2])
-input_file = "dataset/small1.csv"  # sys.argv[3]
-output_file = "output/task1_small1_case1_support3.csv"  # sys.argv[4]
+support = 4  # int(sys.argv[2])
+input_file = "dataset/small2.csv"  # sys.argv[3]
+output_file = "output/task1_small2_case1_support4.csv"  # sys.argv[4]
 phase1_candidates = []
 
 conf = SparkConf().setAppName("INF553").setMaster('local[*]')

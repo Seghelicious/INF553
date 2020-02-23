@@ -106,10 +106,7 @@ def get_output_string(input_tuple, size, output):
     if len(input_tuple) > size:
         output = output[:-1] + "\n\n"
 
-    if len(input_tuple) == 1:
-        output = output + "('" + str(input_tuple[0]) + "'),"
-    else:
-        output = output + str(input_tuple) + ","
+    output = output + "('" + str(input_tuple[0]) + "')," if len(input_tuple) == 1 else output + str(input_tuple) + ","
     return output
 
 
@@ -133,10 +130,7 @@ def get_required_bucket(row, case):
 
 def write_to_file(candidates, frequent_itemsets):
     with open(output_file, 'w') as file:
-        file.write("Candidates:\n")
-        file.write(candidates + "\n\n")
-        file.write("Frequent Itemsets:\n")
-        file.write(frequent_itemsets)
+        file.write("Candidates:\n" + candidates + "\n\nFrequent Itemsets:\n" + frequent_itemsets)
 
 
 start_time = time.time()
