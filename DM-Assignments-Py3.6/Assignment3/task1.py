@@ -31,8 +31,8 @@ def get_signature_matrix(x, hash_values, m):
     b = hash_values[1]
     p = hash_values[2]
     for x in x[1]:
-        value = ((a*x + b) % p) % m
-        # value = (a*x + b) % m
+        value = (a*x + b) % m
+        # value = ((a*x + b) % p) % m
         hashvalues.append(value)
     return min(hashvalues)
 
@@ -61,6 +61,10 @@ start_time = time.time()
 input_file = 'dataset/yelp_train.csv'  # sys.argv[1]
 output_file = 'output/task1-py.csv'  # sys.argv[2]
 
+bands = 40
+hash_values = create_hash_values()
+row_size = int(len(hash_values) / bands)
+
 # Create spark context
 conf = SparkConf().setAppName("INF553").setMaster('local[*]')
 sc = SparkContext(conf=conf)
@@ -73,10 +77,6 @@ users.sort()
 user_to_number_dict = {}
 for i, u in enumerate(users):
     user_to_number_dict[u] = i
-
-bands = 40
-hash_values = create_hash_values()
-row_size = int(len(hash_values) / bands)
 num_users = len(user_to_number_dict)
 
 matrix = data.map(lambda x: (x[1], user_to_number_dict[x[0]])).groupByKey().map(lambda x: (x[0], list(x[1]))).sortBy(lambda x: x[0])
@@ -99,7 +99,7 @@ similar_candidates = signature_matrix.flatMap(lsh).reduceByKey(lambda x, y: x + 
 # 00001 = {tuple} <class 'tuple'>: ('--I7YYLada0tSLkORTHb5Q', 'PfOCPjBrlQAnz__NXj9h_w')
 
 
-output = similar_candidates.map(lambda business: jaccard_similarity(business[0], business[1])).filter(lambda x: x[2] >= 0.5).sortBy(lambda x: (x[0], x[1]))
-write_to_file(output)
+result = similar_candidates.map(lambda business: jaccard_similarity(business[0], business[1])).filter(lambda x: x[2] >= 0.5).sortBy(lambda x: (x[0], x[1]))
+write_to_file(result)
 
 print("Duration: ", time.time() - start_time)
