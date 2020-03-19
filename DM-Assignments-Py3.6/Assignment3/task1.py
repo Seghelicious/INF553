@@ -6,6 +6,7 @@ import sys
 import os
 
 os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
+#export PYSPARK_PYTHON=python3.6
 
 
 def write_to_file(data):
@@ -15,13 +16,12 @@ def write_to_file(data):
             file.write(str(line[0]) + "," + str(line[1]) + "," + str(line[2]) + "\n")
 
 
-def create_hash_values():
-    a = random.sample(range(1, 1000), 150)
-    b = random.sample(range(100, 1000), 150)
-    c = random.sample(range(5000, 200000), 150)
+def create_hash_values(size):
+    a = random.sample(range(1, 1000), size)
+    b = random.sample(range(1, 1000), size)
     hash_values = []
-    for i in range(150):
-        hash_values.append([a[i], b[i], c[i]])
+    for i in range(size):
+        hash_values.append([a[i], b[i]])
     return hash_values
 
 
@@ -29,7 +29,7 @@ def get_signature_matrix(x, hash_values, m):
     hashvalues = []
     a = hash_values[0]
     b = hash_values[1]
-    p = hash_values[2]
+    # p = hash_values[2]
     for x in x[1]:
         value = (a*x + b) % m
         # value = ((a*x + b) % p) % m
@@ -46,8 +46,8 @@ def lsh(x):
     return band_data
 
 
-def pair_businesses(x):
-    return sorted(list(itertools.combinations(sorted(x), 2)))
+def pair_businesses(businesses):
+    return sorted(list(itertools.combinations(sorted(businesses), 2)))
 
 
 def jaccard_similarity(business1, business2):
@@ -58,16 +58,19 @@ def jaccard_similarity(business1, business2):
 
 
 start_time = time.time()
-input_file = 'dataset/yelp_train.csv'  # sys.argv[1]
-output_file = 'output/task1-py.csv'  # sys.argv[2]
+# input_file = 'dataset/yelp_train.csv'
+# output_file = 'output/task1-py.csv'
+input_file = sys.argv[1]
+output_file = sys.argv[2]
+
 
 bands = 40
-hash_values = create_hash_values()
+hash_values = create_hash_values(80)
 row_size = int(len(hash_values) / bands)
 
-# Create spark context
 conf = SparkConf().setAppName("INF553").setMaster('local[*]')
 sc = SparkContext(conf=conf)
+sc.setLogLevel("ERROR")
 rdd = sc.textFile(input_file)
 header = rdd.first()
 data = rdd.filter(lambda x: x != header).map(lambda x: x.split(','))
@@ -81,25 +84,14 @@ num_users = len(user_to_number_dict)
 
 matrix = data.map(lambda x: (x[1], user_to_number_dict[x[0]])).groupByKey().map(lambda x: (x[0], list(x[1]))).sortBy(lambda x: x[0])
 characteristic_matrix = matrix.collectAsMap()
-# returns businessId <-> [list of users' id who rated this business]
-# 00000 = {tuple} <class 'tuple'>: ('--6MefnULPED_I942VcFNA', [5699, 7421, 4230, 6791, 3300...])
-# 00001 = {tuple} <class 'tuple'>: ('--7zmmkVg-IMGaXbuVd0SQ', [2710, 1306, 6602, 1245, 6442...])
 
 signature_matrix = matrix.map(lambda x: (x[0], [get_signature_matrix(x, hash_value_list, num_users) for hash_value_list in hash_values]))
-# returns columns of signature matrix
-# key : businessId
-# value list : min value from users' id after applying hashing function, no of values = no of hashvalues i.e 150
-# 00000 = {tuple} <class 'tuple'>: ('--6MefnULPED_I942VcFNA', [206, 1022, 2076, 543, 486, 224,...])
-# 00001 = {tuple} <class 'tuple'>: ('--7zmmkVg-IMGaXbuVd0SQ', [2947, 1903, 166, 1101, 1218...])
 
-# LSH (atleast one band should match for businesses)
 similar_candidates = signature_matrix.flatMap(lsh).reduceByKey(lambda x, y: x + y).filter(lambda x: len(x[1]) > 1).flatMap(lambda x: pair_businesses(list(x[1]))).distinct()
-# lsh returns (bandNum <-> list of hashedUserIds) <->  businessId
-# 00000 = {tuple} <class 'tuple'>: ('--DaPTJW3-tB1vP-PfdTEg', 'aaL1lgLyDwdP66TkS-XKHA')
-# 00001 = {tuple} <class 'tuple'>: ('--I7YYLada0tSLkORTHb5Q', 'PfOCPjBrlQAnz__NXj9h_w')
-
 
 result = similar_candidates.map(lambda business: jaccard_similarity(business[0], business[1])).filter(lambda x: x[2] >= 0.5).sortBy(lambda x: (x[0], x[1]))
 write_to_file(result)
 
 print("Duration: ", time.time() - start_time)
+# Precision = 643/643 = 1
+# Recall = 644/645 = 0.998
