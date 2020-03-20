@@ -93,12 +93,12 @@ def write_to_file(output_file, prediction_list):
 start_time = time.time()
 
 # time /home/local/spark/latest/bin/spark-submit task2_1.py $ASNLIB/publicdata/yelp_train.csv $ASNLIB/publicdata/yelp_val.csv task2-output.csv
-# input_file_train = sys.argv[1]
-# input_file_test = sys.argv[2]
-# output_file = sys.argv[3]
-input_file_train = 'dataset/yelp_train.csv'
-input_file_test = 'dataset/yelp_val.csv'
-output_file = 'output/task2.csv'
+input_file_train = sys.argv[1]
+input_file_test = sys.argv[2]
+output_file = sys.argv[3]
+# input_file_train = 'dataset/yelp_train.csv'
+# input_file_test = 'dataset/yelp_val.csv'
+# output_file = 'output/task2.csv'
 
 sc = SparkContext(appName="task2")
 sc.setLogLevel("ERROR")
@@ -153,3 +153,8 @@ print("Duration : ", time.time() - start_time)
 # >=4:  1
 # RMSE 1.070173169614003
 # Duration :  77.43102025985718
+# Vocareum
+# Duration :  80.88700485229492
+# real    1m23.310s
+# user    0m24.456s
+# sys     0m2.748s
