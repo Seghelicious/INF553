@@ -5,59 +5,7 @@ import time
 import math
 
 os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
-
-
-def get_prediction(pearson_coeff_and_rating_list, user_avg_rating, business_avg_rating):
-    prediction_weight_sum = 0
-    pearson_coefficient_sum = 0
-    neighbourhood_cutoff = 50
-    pearson_coeff_and_rating_list.sort(key=lambda x: x[0], reverse=True)
-    if len(pearson_coeff_and_rating_list) == 0:
-        # couldnt get valid pearson coeff b/w businesses, returning avg of avg_user_rating and avg_business_rating
-        return (user_avg_rating + business_avg_rating) / 2
-    neighbourhood = min(len(pearson_coeff_and_rating_list), neighbourhood_cutoff)
-    for x in range(neighbourhood):
-        prediction_weight_sum += pearson_coeff_and_rating_list[x][0] * pearson_coeff_and_rating_list[x][1]  # pearson_coeff * rating
-        pearson_coefficient_sum += abs(pearson_coeff_and_rating_list[x][0])
-    prediction = prediction_weight_sum / pearson_coefficient_sum
-    return min(5.0, max(0.0, prediction))
-
-
-# def get_pearson_coefficient(neighbour_business_id, average_business_rating, average_neighbour_rating, users_list, business):
-#     # business_rating_rdd = business_rating_rdd_broadcast.value
-#     neighbour_business_ratings = business_rating_rdd.get(neighbour_business_id)
-#     all_business_ratings = []
-#     all_neighbour_ratings = []
-#     user_index = 0
-#     while user_index < len(users_list):
-#         current_user_id = users_list[user_index]
-#         if neighbour_business_ratings.get(current_user_id):
-#             business_rating = business_rating_rdd.get(business).get(current_user_id)
-#             neighbour_rating = neighbour_business_ratings.get(current_user_id)
-#             all_business_ratings.append(business_rating)
-#             all_neighbour_ratings.append(neighbour_rating)
-#         user_index += 1
-#     if len(all_business_ratings) != 0:
-#         numerator = 0
-#         denominator_business = 0
-#         denominator_neighbour = 0
-#         for j in range(0, len(all_business_ratings)):
-#             normalized_business_rating = all_business_ratings[j] - average_business_rating
-#             normalized_neighbour_rating = all_neighbour_ratings[j] - average_neighbour_rating
-#             numerator += normalized_business_rating * normalized_neighbour_rating
-#             denominator_business += pow(normalized_business_rating, 2)
-#             denominator_neighbour += pow(normalized_neighbour_rating, 2)
-#         denominator = math.sqrt(denominator_business) * math.sqrt(denominator_neighbour)
-#         if denominator == 0:
-#             if numerator == 0:
-#                 pearson_coefficient = 1
-#             else:
-#                 return -1
-#         else:
-#             pearson_coefficient = numerator / denominator
-#     else:
-#         pearson_coefficient = float(average_business_rating / average_neighbour_rating)
-#     return pearson_coefficient
+#export PYSPARK_PYTHON=python3.6
 
 
 def item_based_prediction(test_data):
@@ -82,7 +30,7 @@ def item_based_prediction(test_data):
         else:
             businesses_list = list(user_rating_rdd.get(user))  # list() gives list of keys in dict
             if len(businesses_list) != 0:  # user has given ratings
-                pearson_coeff_and_rating = []
+                pearson_coeff_and_rating_list = []
                 for neighbour_business_id in businesses_list:
                     average_neighbour_rating = business_avg_rating_rdd.get(neighbour_business_id)
                     current_neighbour_rating = business_rating_rdd.get(neighbour_business_id).get(user)
@@ -119,21 +67,24 @@ def item_based_prediction(test_data):
                             pearson_coefficient = numerator / denominator
                     else:
                         pearson_coefficient = float(average_business_rating / average_neighbour_rating)
-
-
-                    # pearson_coefficient = get_pearson_coefficient(neighbour_business_id, average_business_rating, average_neighbour_rating, users_list, business)
-
-
-
-
-
-
                     if pearson_coefficient > 0:
                         if pearson_coefficient > 1:
                             pearson_coefficient = 1 / pearson_coefficient
-                        pearson_coeff_and_rating.append((pearson_coefficient, current_neighbour_rating))
-                prediction = get_prediction(pearson_coeff_and_rating, user_avg_rating_rdd.get(user), business_avg_rating_rdd.get(business))
-                return user, business, str(prediction)
+                        pearson_coeff_and_rating_list.append((pearson_coefficient, current_neighbour_rating))
+                prediction_weight_sum = 0
+                pearson_coefficient_sum = 0
+                neighbourhood_cutoff = 50
+                pearson_coeff_and_rating_list.sort(key=lambda x: x[0], reverse=True)
+                if len(pearson_coeff_and_rating_list) == 0:
+                    # couldnt get valid pearson coeff b/w businesses, returning avg of avg_user_rating and avg_business_rating
+                    return user, business, (user_avg_rating_rdd.get(user) + average_business_rating) / 2
+                neighbourhood = min(len(pearson_coeff_and_rating_list), neighbourhood_cutoff)
+                for x in range(neighbourhood):
+                    prediction_weight_sum += pearson_coeff_and_rating_list[x][0] * pearson_coeff_and_rating_list[x][
+                        1]  # pearson_coeff * rating
+                    pearson_coefficient_sum += abs(pearson_coeff_and_rating_list[x][0])
+                prediction = prediction_weight_sum / pearson_coefficient_sum
+                return user, business, min(5.0, max(0.0, prediction))
             else:
                 # new user (no such user in yelp_test.csv)
                 return user, business, str(average_business_rating)
@@ -184,26 +135,26 @@ prediction_list = prediction_rdd.collect()
 
 write_to_file(output_file, prediction_list)
 
-# output_rdd = sc.textFile(output_file)
-# output_header = output_rdd.first()
-# output_data = output_rdd.filter(lambda x: x != output_header).map(lambda x: x.split(','))
-# output_data_dict = output_data.map(lambda x: (((x[0]), (x[1])), float(x[2])))
-# test_data_dict = test_data.map(lambda x: x.split(",")).map(lambda x: (((x[0]), (x[1])), float(x[2])))
-# joined_data = test_data_dict.join(output_data_dict).map(lambda x: (abs(x[1][0] - x[1][1])))
+output_rdd = sc.textFile(output_file)
+output_header = output_rdd.first()
+output_data = output_rdd.filter(lambda x: x != output_header).map(lambda x: x.split(','))
+output_data_dict = output_data.map(lambda x: (((x[0]), (x[1])), float(x[2])))
+test_data_dict = test_data.map(lambda x: x.split(",")).map(lambda x: (((x[0]), (x[1])), float(x[2])))
+joined_data = test_data_dict.join(output_data_dict).map(lambda x: (abs(x[1][0] - x[1][1])))
 
-# diff_0_to_1 = joined_data.filter(lambda x: x >= 0 and x < 1).count()
-# diff_1_to_2 = joined_data.filter(lambda x: x >= 1 and x < 2).count()
-# diff_2_to_3 = joined_data.filter(lambda x: x >= 2 and x < 3).count()
-# diff_3_to_4 = joined_data.filter(lambda x: x >= 3 and x < 4).count()
-# diff_more_than_4 = joined_data.filter(lambda x: x >= 4).count()
-# print(">=0 and <1: ", diff_0_to_1)
-# print(">=1 and <2: ", diff_1_to_2)
-# print(">=2 and <3: ", diff_2_to_3)
-# print(">=3 and <4: ", diff_3_to_4)
-# print(">=4: ", diff_more_than_4)
-# rmse_rdd = joined_data.map(lambda x: x ** 2).reduce(lambda x, y: x + y)
-# rmse = math.sqrt(rmse_rdd / output_data_dict.count())
-# print("RMSE", rmse)
+diff_0_to_1 = joined_data.filter(lambda x: x >= 0 and x < 1).count()
+diff_1_to_2 = joined_data.filter(lambda x: x >= 1 and x < 2).count()
+diff_2_to_3 = joined_data.filter(lambda x: x >= 2 and x < 3).count()
+diff_3_to_4 = joined_data.filter(lambda x: x >= 3 and x < 4).count()
+diff_more_than_4 = joined_data.filter(lambda x: x >= 4).count()
+print(">=0 and <1: ", diff_0_to_1)
+print(">=1 and <2: ", diff_1_to_2)
+print(">=2 and <3: ", diff_2_to_3)
+print(">=3 and <4: ", diff_3_to_4)
+print(">=4: ", diff_more_than_4)
+rmse_rdd = joined_data.map(lambda x: x ** 2).reduce(lambda x, y: x + y)
+rmse = math.sqrt(rmse_rdd / output_data_dict.count())
+print("RMSE", rmse)
 
 print("Duration : ", time.time() - start_time)
 
@@ -213,4 +164,4 @@ print("Duration : ", time.time() - start_time)
 # >=3 and <4:  1283
 # >=4:  1
 # RMSE 1.070197126087719
-# Duration :  116.29983830451965
+# Duration :  112.29983830451965
