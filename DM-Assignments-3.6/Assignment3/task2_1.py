@@ -1,6 +1,6 @@
 import os
 import sys
-from pyspark import SparkContext
+from pyspark import SparkConf, SparkContext
 import time
 import math
 
@@ -100,7 +100,8 @@ input_file_train = 'dataset/yelp_train.csv'
 input_file_test = 'dataset/yelp_val.csv'
 output_file = 'output/task2.csv'
 
-sc = SparkContext(appName="task2")
+conf = SparkConf().setAppName("INF553").setMaster('local[*]')
+sc = SparkContext(conf=conf)
 sc.setLogLevel("ERROR")
 train_rdd = sc.textFile(input_file_train)
 train_header = train_rdd.first()
