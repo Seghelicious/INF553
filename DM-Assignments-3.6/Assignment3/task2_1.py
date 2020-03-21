@@ -93,12 +93,12 @@ def write_to_file(output_file, prediction_list):
 start_time = time.time()
 
 # time /home/local/spark/latest/bin/spark-submit task2_1.py $ASNLIB/publicdata/yelp_train.csv $ASNLIB/publicdata/yelp_val.csv task2-output.csv
-input_file_train = sys.argv[1]
-input_file_test = sys.argv[2]
-output_file = sys.argv[3]
-# input_file_train = 'dataset/yelp_train.csv'
-# input_file_test = 'dataset/yelp_val.csv'
-# output_file = 'output/task2.csv'
+# input_file_train = sys.argv[1]
+# input_file_test = sys.argv[2]
+# output_file = sys.argv[3]
+input_file_train = 'dataset/yelp_train.csv'
+input_file_test = 'dataset/yelp_val.csv'
+output_file = 'output/task2.csv'
 
 sc = SparkContext(appName="task2")
 sc.setLogLevel("ERROR")
@@ -129,7 +129,7 @@ write_to_file(output_file, prediction_list)
 # output_data_dict = output_data.map(lambda x: (((x[0]), (x[1])), float(x[2])))
 # test_data_dict = test_data.map(lambda x: x.split(",")).map(lambda x: (((x[0]), (x[1])), float(x[2])))
 # joined_data = test_data_dict.join(output_data_dict).map(lambda x: (abs(x[1][0] - x[1][1])))
-#
+
 # diff_0_to_1 = joined_data.filter(lambda x: x >= 0 and x < 1).count()
 # diff_1_to_2 = joined_data.filter(lambda x: x >= 1 and x < 2).count()
 # diff_2_to_3 = joined_data.filter(lambda x: x >= 2 and x < 3).count()
