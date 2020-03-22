@@ -59,7 +59,7 @@ def jaccard_similarity(business1, business2):
 
 start_time = time.time()
 # input_file = 'dataset/yelp_train.csv'
-# output_file = 'output/task1-py.csv'
+# output_file = 'output/task1.csv'
 input_file = sys.argv[1]
 output_file = sys.argv[2]
 

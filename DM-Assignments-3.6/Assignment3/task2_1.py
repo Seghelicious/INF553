@@ -98,7 +98,7 @@ start_time = time.time()
 # output_file = sys.argv[3]
 input_file_train = 'dataset/yelp_train.csv'
 input_file_test = 'dataset/yelp_val.csv'
-output_file = 'output/task2.csv'
+output_file = 'output/task2_1.csv'
 
 conf = SparkConf().setAppName("INF553").setMaster('local[*]')
 sc = SparkContext(conf=conf)
