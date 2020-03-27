@@ -5,8 +5,8 @@ import random
 import sys
 import os
 
-os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
-#export PYSPARK_PYTHON=python3.6
+# os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
+# export PYSPARK_PYTHON=python3.6
 
 
 def write_to_file(data):
@@ -58,10 +58,10 @@ def jaccard_similarity(business1, business2):
 
 
 start_time = time.time()
-# input_file = 'dataset/yelp_train.csv'
-# output_file = 'output/task1.csv'
-input_file = sys.argv[1]
-output_file = sys.argv[2]
+input_file = 'dataset/yelp_train.csv'
+output_file = 'output/task1.csv'
+# input_file = sys.argv[1]
+# output_file = sys.argv[2]
 
 
 bands = 40

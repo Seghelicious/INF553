@@ -4,8 +4,59 @@ from pyspark import SparkConf, SparkContext
 import time
 import math
 
-os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
-#export PYSPARK_PYTHON=python3.6
+# os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
+# export PYSPARK_PYTHON=python3.6
+
+
+def get_pearson_coefficient(neighbour_id, users_list, business_ratings, average_business_rating):
+    average_neighbour_rating = business_avg_rating_map.get(neighbour_id)
+    neighbour_business_ratings = business_rating_map.get(neighbour_id)
+    all_business_ratings = []
+    all_neighbour_ratings = []
+    for current_user_id in users_list:
+        if neighbour_business_ratings.get(current_user_id):
+            business_rating = business_ratings.get(current_user_id)
+            neighbour_rating = neighbour_business_ratings.get(current_user_id)
+            all_business_ratings.append(business_rating)
+            all_neighbour_ratings.append(neighbour_rating)
+    if len(all_business_ratings) != 0:
+        numerator = 0
+        denominator_business = 0
+        denominator_neighbour = 0
+        for j in range(0, len(all_business_ratings)):
+            normalized_business_rating = all_business_ratings[j] - average_business_rating
+            normalized_neighbour_rating = all_neighbour_ratings[j] - average_neighbour_rating
+            numerator += normalized_business_rating * normalized_neighbour_rating
+            denominator_business += normalized_business_rating * normalized_business_rating
+            denominator_neighbour += normalized_neighbour_rating * normalized_neighbour_rating
+        denominator = math.sqrt(denominator_business * denominator_neighbour)
+        if denominator == 0:
+            if numerator == 0:
+                pearson_coefficient = 1
+            else:
+                return -1
+        else:
+            pearson_coefficient = numerator / denominator
+    else:
+        pearson_coefficient = float(average_business_rating / average_neighbour_rating)  # default voting
+    return pearson_coefficient
+
+
+def get_prediction(pearson_coeff_and_rating_list, default_average):
+    prediction_weight_sum = 0
+    pearson_coefficient_sum = 0
+    neighbourhood_cutoff = 50
+    pearson_coeff_and_rating_list.sort(key=lambda x: x[0], reverse=True)
+    if len(pearson_coeff_and_rating_list) == 0:
+        # couldnt get valid pearson coeff b/w businesses, returning avg of avg_user_rating and avg_business_rating
+        return default_average
+    neighbourhood = min(len(pearson_coeff_and_rating_list), neighbourhood_cutoff)
+    for x in range(neighbourhood):
+        prediction_weight_sum += pearson_coeff_and_rating_list[x][0] * pearson_coeff_and_rating_list[x][
+            1]  # pearson_coeff * rating
+        pearson_coefficient_sum += abs(pearson_coeff_and_rating_list[x][0])
+    prediction = prediction_weight_sum / pearson_coefficient_sum
+    return min(5.0, max(0.0, prediction))
 
 
 def item_based_prediction(test_data):
@@ -29,53 +80,13 @@ def item_based_prediction(test_data):
             if len(businesses_list) != 0:  # user has given ratings
                 pearson_coeff_and_rating_list = []
                 for neighbour_business_id in businesses_list:
-                    average_neighbour_rating = business_avg_rating_map.get(neighbour_business_id)
                     current_neighbour_rating = business_rating_map.get(neighbour_business_id).get(user)
-                    neighbour_business_ratings = business_rating_map.get(neighbour_business_id)
-                    all_business_ratings = []
-                    all_neighbour_ratings = []
-                    for current_user_id in users_list:
-                        if neighbour_business_ratings.get(current_user_id):
-                            business_rating = business_ratings.get(current_user_id)
-                            neighbour_rating = neighbour_business_ratings.get(current_user_id)
-                            all_business_ratings.append(business_rating)
-                            all_neighbour_ratings.append(neighbour_rating)
-                    if len(all_business_ratings) != 0:
-                        numerator = 0
-                        denominator_business = 0
-                        denominator_neighbour = 0
-                        for j in range(0, len(all_business_ratings)):
-                            normalized_business_rating = all_business_ratings[j] - average_business_rating
-                            normalized_neighbour_rating = all_neighbour_ratings[j] - average_neighbour_rating
-                            numerator += normalized_business_rating * normalized_neighbour_rating
-                            denominator_business += normalized_business_rating * normalized_business_rating
-                            denominator_neighbour += normalized_neighbour_rating * normalized_neighbour_rating
-                        denominator = math.sqrt(denominator_business * denominator_neighbour)
-                        if denominator == 0:
-                            if numerator == 0:
-                                pearson_coefficient = 1
-                            else:
-                                continue
-                        else:
-                            pearson_coefficient = numerator / denominator
-                    else:
-                        pearson_coefficient = float(average_business_rating / average_neighbour_rating)
+                    pearson_coefficient = get_pearson_coefficient(neighbour_business_id, users_list, business_ratings, average_business_rating)
                     if pearson_coefficient > 0:
                         if pearson_coefficient > 1:
                             pearson_coefficient = 1 / pearson_coefficient
                         pearson_coeff_and_rating_list.append((pearson_coefficient, current_neighbour_rating))
-                prediction_weight_sum = 0
-                pearson_coefficient_sum = 0
-                neighbourhood_cutoff = 50
-                pearson_coeff_and_rating_list.sort(key=lambda x: x[0], reverse=True)
-                if len(pearson_coeff_and_rating_list) == 0:
-                    # couldnt get valid pearson coeff b/w businesses, returning avg of avg_user_rating and avg_business_rating
-                    return user, business, (user_avg_rating_map.get(user) + average_business_rating) / 2
-                neighbourhood = min(len(pearson_coeff_and_rating_list), neighbourhood_cutoff)
-                for x in range(neighbourhood):
-                    prediction_weight_sum += pearson_coeff_and_rating_list[x][0] * pearson_coeff_and_rating_list[x][1]  # pearson_coeff * rating
-                    pearson_coefficient_sum += abs(pearson_coeff_and_rating_list[x][0])
-                prediction = prediction_weight_sum / pearson_coefficient_sum
+                prediction = get_prediction(pearson_coeff_and_rating_list, (user_avg_rating_map.get(user) + average_business_rating) / 2)
                 return user, business, min(5.0, max(0.0, prediction))
             else:
                 # new user (no such user in yelp_test.csv)
@@ -109,17 +120,14 @@ train_data = train_rdd.filter(lambda x: x != train_header).map(lambda x: x.split
 
 test_rdd = sc.textFile(input_file_test)
 test_header = test_rdd.first()
-test_data = test_rdd.filter(lambda x: x != test_header)
-# train_data.subtract(test_data)
-
-# test_data.collect()
+test_rdd = test_rdd.filter(lambda x: x != test_header)
 
 user_rating_map = train_data.map(lambda x: ((x[0]), ((x[1]), float(x[2])))).groupByKey().sortByKey(True).mapValues(dict).collectAsMap()  # user key
 business_rating_map = train_data.map(lambda x: ((x[1]), ((x[0]), float(x[2])))).groupByKey().sortByKey(True).mapValues(dict).collectAsMap()  # business key
 user_avg_rating_map = train_data.map(lambda x: (x[0], float(x[2]))).groupByKey().mapValues(lambda x: sum(x) / len(x)).collectAsMap()  # userId <-> avg rating
 business_avg_rating_map = train_data.map(lambda x: (x[1], float(x[2]))).groupByKey().mapValues(lambda x: sum(x) / len(x)).collectAsMap()  # businessId <-> avg rating
 
-test_matrix = test_data.map(lambda x: x.split(",")).sortBy(lambda x: ((x[0]), (x[1]))).persist()
+test_matrix = test_rdd.map(lambda x: x.split(",")).sortBy(lambda x: ((x[0]), (x[1]))).persist()
 prediction_list = test_matrix.map(item_based_prediction).collect()
 
 write_to_file(output_file, prediction_list)
@@ -128,7 +136,7 @@ write_to_file(output_file, prediction_list)
 # output_header = output_rdd.first()
 # output_data = output_rdd.filter(lambda x: x != output_header).map(lambda x: x.split(','))
 # output_data_dict = output_data.map(lambda x: (((x[0]), (x[1])), float(x[2])))
-# test_data_dict = test_data.map(lambda x: x.split(",")).map(lambda x: (((x[0]), (x[1])), float(x[2])))
+# test_data_dict = test_rdd.map(lambda x: x.split(",")).map(lambda x: (((x[0]), (x[1])), float(x[2])))
 # joined_data = test_data_dict.join(output_data_dict).map(lambda x: (abs(x[1][0] - x[1][1])))
 #
 # diff_0_to_1 = joined_data.filter(lambda x: x >= 0 and x < 1).count()

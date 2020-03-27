@@ -1,44 +1,75 @@
-import math
 import os
 import sys
 import json
 import numpy as np
+import pandas as pd
 import xgboost as xgb
 from pyspark import SparkContext, SparkConf
 import time
 
-# os.environ["PYSPARK_PYTHON"] = "/usr/local/bin/python3.6"
+from sklearn import preprocessing
+from sklearn.metrics import mean_squared_error
 
 
-def get_feature_list(row):
-    features = []
-    features.extend(user_json_map.get(row[0]))
-    features.extend(business_json_map.get(row[1]))
+def get_features(data, user_json_map, business_json_map):
+    user_review_count = []
+    user_review_useful = []
+    user_fans = []
+    user_avg_rating = []
+    business_avg_rating = []
+    business_review_count = []
+    business_price_range = []
+
+    for user_id in data['user_id']:
+        if user_id in user_json_map.keys():
+            user_review_count.append(user_json_map.get(user_id)[0])
+            user_review_useful.append(user_json_map.get(user_id)[1])
+            user_fans.append(user_json_map.get(user_id)[2])
+            user_avg_rating.append(user_json_map.get(user_id)[3])
+        else:
+            user_review_count.append(avg_users_reviewcount)
+            user_review_useful.append(0)
+            user_fans.append(0)
+            user_avg_rating.append(avg_users_rating)
+
+    for business_id in data['business_id']:
+        if business_id in business_json_map.keys():
+            business_avg_rating.append(business_json_map.get(business_id)[0])
+            business_review_count.append(business_json_map.get(business_id)[1])
+            business_price_range.append(business_json_map.get(business_id)[2])
+        else:
+            business_avg_rating.append(avg_businesses_rating)
+            business_review_count.append(avg_businesses_reviewcount)
+            business_price_range.append(2)
+
+    data['user_review_count'] = user_review_count
+    data['user_review_useful'] = user_review_useful
+    data['user_fans'] = user_fans
+    data['user_avg_rating'] = user_avg_rating
+    data['business_avg_rating'] = business_avg_rating
+    data['business_review_count'] = business_review_count
+    data['business_price_range'] = business_price_range
+    return data
+
+
+def fit_invalid_type_cols(features):
+    for col in features.columns:
+        if features[col].dtype == 'object':
+            label = preprocessing.LabelEncoder()
+            label.fit(list(features[col].values))
+            features[col] = label.transform(list(features[col].values))
     return features
 
 
-def get_model_params():
-    params = {}
-    eta = 0.3
-    booster = 'gbtree'
-    max_depth = 15
-    objective = 'reg:linear'
-    silent = 1
-    params['eta'] = eta
-    params['booster'] = booster
-    params['max-depth'] = max_depth
-    params['objective'] = objective
-    params['silent'] = silent
-    return params
+def get_price_range(attributes, key):
+    if attributes:
+        if key in attributes.keys():
+            return int(attributes.get(key))
+    return 0
 
 
-def write_to_file(output_file, output, test_data):
-    file = open(output_file, 'w')
-    file.write("user_id, business_id, prediction\n")
-    for i in range(0, len(output)):
-        predicted_rating = output[i]
-        predicted_rating = max(1, min(5, predicted_rating))
-        file.write(test_data[i][0] + "," + test_data[i][1] + "," + str(predicted_rating) + "\n")
+def write_to_file(df, output_file):
+    df.to_csv(output_file, header=['user_id', ' business_id', ' prediction'], index=False, sep=',', mode='w')
 
 
 start_time = time.time()
@@ -50,77 +81,49 @@ output_file = sys.argv[3]
 # test_file = 'dataset/yelp_val.csv'
 # output_file = 'output/task2_2.csv'
 
+train_data = pd.read_csv(os.path.join(train_folder, 'yelp_train.csv'))
+test_data = pd.read_csv(test_file)
+test_copy = test_data.copy()
+
 conf = SparkConf().setAppName("INF553").setMaster('local[*]')
 sc = SparkContext(conf=conf)
 sc.setLogLevel("ERROR")
 
-train_rdd = sc.textFile(os.path.join(train_folder, 'yelp_train.csv'))
-train_header = train_rdd.first()
-train_data = train_rdd.filter(lambda x: x != train_header).map(lambda x: x.split(",")).map(
-    lambda x: (x[0], x[1], float(x[2])))
+user_json_rdd = sc.textFile(os.path.join(train_folder, 'user.json')).map(json.loads).map(
+    lambda x: ((x["user_id"]), (x["review_count"], x["useful"], x["fans"], x["average_stars"]))).persist()
+user_json_map = user_json_rdd.collectAsMap()
 
-user_json_rdd = sc.textFile(os.path.join(train_folder, 'user.json')).map(json.loads)
-user_json_map = user_json_rdd.map(
-    lambda x: (x["user_id"], (x["review_count"], x["average_stars"], x["useful"], x["fans"]))).collectAsMap()
-business_json_rdd = sc.textFile(os.path.join(train_folder, 'business.json')).map(json.loads)
-business_json_map = business_json_rdd.map(
-    lambda x: (x['business_id'], (x['stars'], x['review_count']))).collectAsMap()
+business_json_rdd = sc.textFile(os.path.join(train_folder, 'business.json')).map(json.loads).map(
+    lambda x: ((x['business_id']), (x['stars'], x['review_count'], get_price_range(x['attributes'], 'RestaurantsPriceRange2')))).persist()
+business_json_map = business_json_rdd.collectAsMap()
 
+avg_users_rating = user_json_rdd.map(lambda x: x[1][3]).mean()
+avg_users_reviewcount = user_json_rdd.map(lambda x: x[1][0]).mean()
+avg_businesses_rating = business_json_rdd.map(lambda x: x[1][0]).mean()
+avg_businesses_reviewcount = business_json_rdd.map(lambda x: x[1][1]).mean()
 
-# training phase - features : review_count, average_stars, useful, fans, stars, review_count. label : rating
-training_data = []
-label = []
-for train_row in train_data.collect():
-    training_data.append(get_feature_list(train_row))
-    label.append(train_row[2])
-training_data = np.asarray(training_data)
-label = np.asarray(label)
-train_data = xgb.DMatrix(training_data, label=label)
-model = xgb.train(get_model_params(), train_data, 50)
+train_features = get_features(train_data, user_json_map, business_json_map)
+train_features = fit_invalid_type_cols(train_features)
+x_train = train_features.drop(["stars"], axis=1)
+y_train = train_features.stars.values
 
-test_rdd = sc.textFile(test_file)
-test_rdd_header = test_rdd.first()
-test_rdd = test_rdd.filter(lambda x: x != test_rdd_header)
-test_data_val = test_rdd.map(lambda x: x.split(',')).map(lambda x: (x[0], x[1])).collect()
+model = xgb.XGBRegressor(learning_rate=0.3)
+model.fit(x_train, y_train)
 
-test_data = []
-for test_row in test_data_val:
-    test_data.append(get_feature_list(test_row))
-test_data = np.asarray(test_data)
-output = model.predict(xgb.DMatrix(test_data))
-write_to_file(output_file, output, test_data_val)
+test_features = get_features(test_copy, user_json_map, business_json_map)
+test_features = fit_invalid_type_cols(test_features)
+x_test = test_features.drop(["stars"], axis=1)
+prediction = model.predict(data=x_test)
 
-# output_rdd = sc.textFile(output_file)
-# output_header = output_rdd.first()
-# output_data = output_rdd.filter(lambda x: x != output_header).map(lambda x: x.split(','))
-# output_data_dict = output_data.map(lambda x: (((x[0]), (x[1])), float(x[2])))
-# test_data_dict = test_rdd.map(lambda x: x.split(",")).map(lambda x: (((x[0]), (x[1])), float(x[2])))
-# joined_data = test_data_dict.join(output_data_dict).map(lambda x: (abs(x[1][0] - x[1][1])))
-#
-# diff_0_to_1 = joined_data.filter(lambda x: x >= 0 and x < 1).count()
-# diff_1_to_2 = joined_data.filter(lambda x: x >= 1 and x < 2).count()
-# diff_2_to_3 = joined_data.filter(lambda x: x >= 2 and x < 3).count()
-# diff_3_to_4 = joined_data.filter(lambda x: x >= 3 and x < 4).count()
-# diff_more_than_4 = joined_data.filter(lambda x: x >= 4).count()
-# print(">=0 and <1: ", diff_0_to_1)
-# print(">=1 and <2: ", diff_1_to_2)
-# print(">=2 and <3: ", diff_2_to_3)
-# print(">=3 and <4: ", diff_3_to_4)
-# print(">=4: ", diff_more_than_4)
-# rmse_rdd = joined_data.map(lambda x: x ** 2).reduce(lambda x, y: x + y)
-# rmse = math.sqrt(rmse_rdd / output_data_dict.count())
-# print("RMSE", rmse)
+result = pd.DataFrame()
+result["user_id"] = test_data.user_id.values
+result["business_id"] = test_data.business_id.values
+result["prediction"] = prediction
 
-print("Duration : ", time.time() - start_time)
+write_to_file(result, output_file)
 
-# >=0 and <1 : 101714
-# >=1 and <2 : 33288
-# >=2 and <3 : 6222
-# >=3 and <4 : 820
-# >=4 :0
-# RMSE 0.9833564690697524
-# Duration: 56.854628801345825
-#
-# real 1m3.547s
-# user 4m1.344s
-# sys 0m4.896s
+# print("RMSE : ", np.sqrt(mean_squared_error(test_data.stars.values, prediction)))
+print("Duration: ", time.time() - start_time)
+
+# RMSE :  0.9838945490587362
+# Duration:  42.468539237976074
