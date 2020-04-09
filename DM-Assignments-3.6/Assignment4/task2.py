@@ -153,5 +153,4 @@ while rem_edges > 0:
     rem_edges -= len(min_cut)
 comunities = sc.parallelize(modular_community).sortBy(lambda x: (len(x), x)).collect()
 write_to_file_community(community_output_file, comunities)
-
 print("Duration : ", time.time() - start_time)
