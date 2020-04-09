@@ -25,11 +25,11 @@ def write_to_file(output_file, output):
 
 start_time = time.time()
 
-# time /home/local/spark/latest/bin/spark-submit task1.py $ASNLIB/publicdata/power_input.csv task1.csv
-input_file = sys.argv[1]
-output_file = sys.argv[2]
-# input_file = 'dataset/power_input.txt'
-# output_file = 'output/task1.csv'
+# time /home/local/spark/latest/bin/spark-submit --packages graphframes:graphframes:0.6.0-spark2.3-s_2.11 task1.py $ASNLIB/publicdata/power_input.txt task1.csv
+# input_file = sys.argv[1]
+# output_file = sys.argv[2]
+input_file = 'dataset/power_input.txt'
+output_file = 'output/task1.csv'
 
 conf = SparkConf().setAppName("INF553").setMaster('local[*]')
 sc = SparkContext(conf=conf)
