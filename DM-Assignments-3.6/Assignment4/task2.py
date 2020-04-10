@@ -62,7 +62,6 @@ def bfs(root, original_graph):
                 if depth[neighbour] == depth[node] + 1:
                     parent[neighbour].append(node)
 
-
     bfs_queue.reverse()
     for child in bfs_queue[:-1]:
         for parnt in parent[child]:
@@ -72,9 +71,9 @@ def bfs(root, original_graph):
 
 
 def get_communities(vertices):
-    visited_nodes = []
     communities = []
     queue = []
+    visited_nodes = []
     for vertex in vertices:
         if vertex not in visited_nodes:
             visited = [vertex]
@@ -97,11 +96,8 @@ def get_modularity(communities):
     for community in communities:
         for i in community:
             for j in community:
+                actual = 1 if j in original_graph[i] else 0
                 expected = (len(original_graph[i]) * len(original_graph[i])) / denominator
-                if j in original_graph[i]:
-                    actual = 1
-                else:
-                    actual = 0
                 modularity += (actual - expected)
     return modularity / denominator
 
@@ -127,7 +123,7 @@ sc = SparkContext(conf=conf)
 sc.setLogLevel("ERROR")
 
 modular_community = []
-best_modularity = 0
+best_modularity = -1
 input_data = sc.textFile(input_file)
 input_data = input_data.map(lambda x: x.split(" ")).persist()
 m = input_data.count()  # total edges
@@ -153,4 +149,5 @@ while rem_edges > 0:
     rem_edges -= len(min_cut)
 comunities = sc.parallelize(modular_community).sortBy(lambda x: (len(x), x)).collect()
 write_to_file_community(community_output_file, comunities)
+
 print("Duration : ", time.time() - start_time)
