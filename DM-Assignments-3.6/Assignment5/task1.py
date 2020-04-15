@@ -5,12 +5,7 @@ import sys
 import time
 
 
-# a = [15, 33, 124, 234, 345, 423, 543, 163, 867, 945]
-# b = [49, 345, 5674, 1929, 8324, 3728, 9473, 7827, 6435, 8273]
-# p = [1543, 6151, 18583, 20249, 23887, 39113, 241867, 375979, 541859, 942217]
-
-
-def create_hash_functions(n):
+def create_hash_values(n):
     a = random.sample(range(1, 1000), n)
     b = random.sample(range(1, 1000), n)
     p = random.sample(range(10000, 10000000), n)
@@ -23,7 +18,7 @@ def create_hash_functions(n):
 def myhashs(s):
     result = []
     user_int = int(binascii.hexlify(s.encode('utf8')), 16)
-    for h in hash_functions:
+    for h in hash_values:
         result.append(((h[0] * user_int + h[1]) % h[2]) % m)
     return result
 
@@ -67,7 +62,7 @@ output_file = sys.argv[4]
 m = 69997
 filter_bit_array = [0] * m
 global_user_set = set()
-hash_functions = create_hash_functions(15)
+hash_values = create_hash_values(15)
 
 f = open(output_file, "w")
 f.write("Time,FPR\n")
