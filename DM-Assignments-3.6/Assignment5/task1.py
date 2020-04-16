@@ -9,10 +9,13 @@ def create_hash_values(n):
     # a = random.sample(range(1, 1000), n)
     # b = random.sample(range(1, 1000), n)
     # p = random.sample(range(10000, 10000000), n)
-    a = [332, 993, 568, 476, 380, 10, 991, 883, 517, 430, 552, 830, 805, 775, 726, 527]
-    b = [572, 403, 428, 621, 786, 451, 790, 335, 970, 97, 88, 811, 71, 991, 601, 842]
-    p = [6649385, 6475799, 4416863, 8564383, 5955983, 4433527, 380121, 1127229, 738500, 2007533, 6623519, 9440624,
-         668655, 2632966, 1674740, 9491576]
+    # a = [332, 993, 568, 476, 380, 10, 991, 883, 517, 430, 552, 830, 805, 775, 726, 527]
+    # b = [572, 403, 428, 621, 786, 451, 790, 335, 970, 97, 88, 811, 71, 991, 601, 842]
+    # p = [6649385, 6475799, 4416863, 8564383, 5955983, 4433527, 380121, 1127229, 738500, 2007533, 6623519, 9440624,
+    #      668655, 2632966, 1674740, 9491576]
+    a = [1, 5, 12, 66, 89]
+    b = [2, 8, 10, 34, 23]
+    p = [12917, 33863, 72671, 113623, 153359]
     hash_values = []
     for i in range(n):
         hash_values.append([a[i], b[i], p[i]])
@@ -23,7 +26,8 @@ def myhashs(s):
     result = []
     user_int = int(binascii.hexlify(s.encode('utf8')), 16)
     for h in hash_values:
-        result.append(((h[0] * user_int + h[1]) % h[2]) % m)
+        # result.append(((h[0] * user_int + h[1]) % h[2]) % m)
+        result.append((h[0] * user_int + h[1]) % m)
     return result
 
 
@@ -47,7 +51,7 @@ def bloom_filter(stream_users, ask):
     if false_positives == 0 and true_negatives == 0:
         fpr = 0.0
     else:
-        fpr = false_positives / float(false_positives + true_negatives)
+        fpr = float(false_positives / (false_positives + true_negatives))
     f.write(str(ask) + "," + str(fpr) + "\n")
 
 
@@ -67,7 +71,8 @@ output_file = 'output/task1.csv'
 m = 69997
 filter_bit_array = [0] * m
 global_user_set = set()
-hash_values = create_hash_values(16)
+# hash_values = create_hash_values(16)
+hash_values = create_hash_values(5)
 
 f = open(output_file, "w")
 f.write("Time,FPR\n")
