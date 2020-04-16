@@ -6,9 +6,13 @@ import time
 
 
 def create_hash_values(n):
-    a = random.sample(range(1, 1000), n)
-    b = random.sample(range(1, 1000), n)
-    p = random.sample(range(10000, 10000000), n)
+    # a = random.sample(range(1, 1000), n)
+    # b = random.sample(range(1, 1000), n)
+    # p = random.sample(range(10000, 10000000), n)
+    a = [332, 993, 568, 476, 380, 10, 991, 883, 517, 430, 552, 830, 805, 775, 726, 527]
+    b = [572, 403, 428, 621, 786, 451, 790, 335, 970, 97, 88, 811, 71, 991, 601, 842]
+    p = [6649385, 6475799, 4416863, 8564383, 5955983, 4433527, 380121, 1127229, 738500, 2007533, 6623519, 9440624,
+         668655, 2632966, 1674740, 9491576]
     hash_values = []
     for i in range(n):
         hash_values.append([a[i], b[i], p[i]])
@@ -47,22 +51,23 @@ def bloom_filter(stream_users, ask):
     f.write(str(ask) + "," + str(fpr) + "\n")
 
 
+# time python task1.py $ASNLIB/publicdata/users.txt 500 30 task1.csv
 start_time = time.time()
 
-# input_file = 'dataset/users.txt'
-# stream_size = 500
-# num_of_asks = 30
-# output_file = 'output/task1.csv'
+input_file = 'dataset/users.txt'
+stream_size = 100
+num_of_asks = 300
+output_file = 'output/task1.csv'
 
-input_file = sys.argv[1]
-stream_size = int(sys.argv[2])
-num_of_asks = int(sys.argv[3])
-output_file = sys.argv[4]
+# input_file = sys.argv[1]
+# stream_size = int(sys.argv[2])
+# num_of_asks = int(sys.argv[3])
+# output_file = sys.argv[4]
 
 m = 69997
 filter_bit_array = [0] * m
 global_user_set = set()
-hash_values = create_hash_values(15)
+hash_values = create_hash_values(16)
 
 f = open(output_file, "w")
 f.write("Time,FPR\n")

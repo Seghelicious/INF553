@@ -5,17 +5,15 @@ import binascii
 import random
 from statistics import mean, median
 
-start_time = time.time()
-
 
 def create_hash_values(n):
-    a = random.sample(range(1, 1000), n)
-    b = random.sample(range(1, 1000), n)
-    p = random.sample(range(10000, 10000000), n)
-    # a = [976, 451, 42, 896, 720, 662, 341, 653, 484, 903]
-    # b = [558, 139, 15, 758, 430, 502, 979, 174, 266, 127]
-    # p = [4938114, 1509312, 6872430, 6647786, 3624344, 9921942, 614041, 3268032, 6486250, 8099072]
-
+    # a = random.sample(range(1, 1000), n)
+    # b = random.sample(range(1, 1000), n)
+    # p = random.sample(range(10000, 10000000), n)
+    a = [332, 993, 568, 476, 380, 10, 991, 883, 517, 430, 552, 830, 805, 775, 726, 527]
+    b = [572, 403, 428, 621, 786, 451, 790, 335, 970, 97, 88, 811, 71, 991, 601, 842]
+    p = [6649385, 6475799, 4416863, 8564383, 5955983, 4433527, 380121, 1127229, 738500, 2007533, 6623519, 9440624,
+         668655, 2632966, 1674740, 9491576]
     hash_values = []
     for i in range(n):
         hash_values.append([a[i], b[i], p[i]])
@@ -60,11 +58,14 @@ def flajolet_martin(stream_users, ask):
             if trailing_zeros > max_traling_zeroes:
                 max_traling_zeroes = trailing_zeros
         estimations.append(2 ** max_traling_zeroes)
-    estimated_count = get_estimated_count(estimations)
+    estimated_count = round(get_estimated_count(estimations))
     estimated_total += estimated_count
     actual_total += len(set(stream_users))
     f.write(str(ask) + "," + str(len(set(stream_users))) + "," + str(estimated_count) + "\n")
 
+
+# time python task2.py $ASNLIB/publicdata/users.txt 500 30 task2.csv
+start_time = time.time()
 
 # input_file = 'dataset/users.txt'
 # stream_size = 300
