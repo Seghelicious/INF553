@@ -23,6 +23,9 @@ def create_hash_values(n):
 def myhashs(s):
     result = []
     user_int = int(binascii.hexlify(s.encode('utf8')), 16)
+    num_hash_values = 16
+    m = 2 ** num_hash_values
+    hash_values = create_hash_values(num_hash_values)
     for h in hash_values:
         result.append(((h[0] * user_int + h[1]) % h[2]) % m)
     return result
@@ -58,39 +61,38 @@ def flajolet_martin(stream_users, ask):
             if trailing_zeros > max_traling_zeroes:
                 max_traling_zeroes = trailing_zeros
         estimations.append(2 ** max_traling_zeroes)
-    estimated_count = round(get_estimated_count(estimations))
+    estimated_count = int(get_estimated_count(estimations))
     estimated_total += estimated_count
     actual_total += len(set(stream_users))
     f.write(str(ask) + "," + str(len(set(stream_users))) + "," + str(estimated_count) + "\n")
 
 
-# time python task2.py $ASNLIB/publicdata/users.txt 500 30 task2.csv
-start_time = time.time()
+if __name__=="__main__":
+    # time python3 task2.py $ASNLIB/publicdata/users.txt 500 30 task2.csv
+    start_time = time.time()
 
-# input_file = 'dataset/users.txt'
-# stream_size = 300
-# num_of_asks = 30
-# output_file = 'output/task2.csv'
+    input_file = 'dataset/users.txt'
+    stream_size = 300
+    num_of_asks = 30
+    output_file = 'output/task2.csv'
 
-actual_total = 0
-estimated_total = 0
+    actual_total = 0
+    estimated_total = 0
 
-input_file = sys.argv[1]
-stream_size = int(sys.argv[2])
-num_of_asks = int(sys.argv[3])
-output_file = sys.argv[4]
+    # input_file = sys.argv[1]
+    # stream_size = int(sys.argv[2])
+    # num_of_asks = int(sys.argv[3])
+    # output_file = sys.argv[4]
 
-num_hash_values = 16
-m = 2 ** num_hash_values
-hash_values = create_hash_values(num_hash_values)
+    num_hash_values = 16
 
-f = open(output_file, "w")
-f.write("Time,Ground Truth,Estimation\n")
+    f = open(output_file, "w")
+    f.write("Time,Ground Truth,Estimation\n")
 
-bx = BlackBox()
-for ask in range(num_of_asks):
-    stream_users = bx.ask(input_file, stream_size)
-    flajolet_martin(stream_users, ask)
-f.close()
-print(estimated_total / actual_total)
-print("Duration : ", time.time() - start_time)
+    bx = BlackBox()
+    for ask in range(num_of_asks):
+        stream_users = bx.ask(input_file, stream_size)
+        flajolet_martin(stream_users, ask)
+    f.close()
+    print(float(estimated_total / actual_total))
+    print("Duration : ", time.time() - start_time)

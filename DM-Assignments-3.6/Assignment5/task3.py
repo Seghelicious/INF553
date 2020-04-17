@@ -8,23 +8,22 @@ def reservoir_sampling(stream_users, ask):
     global reservoir, seqnum
     if ask == 0:
         for seqnum in range(stream_size):
-            reservoir[seqnum] = stream_users[seqnum].replace('\r', '')
+            reservoir[seqnum] = stream_users[seqnum]
         seqnum += 1
     else:
-        for i in range(stream_size):
+        for user in stream_users:
             # random.randint() % q < p will simulate a prob of p / q
             # we need to keep user with prob 100/n, where n ranges from 1 to ask*100, i.e seqnum + 1
-            j = random.randint(0, 100000) % (seqnum + 1)
-            if j < stream_size:
+            if random.randint(0, 100000) % (seqnum + 1) < stream_size:
                 x = random.randint(0, 100000) % 100  # chossing the location in list
-                reservoir[x] = stream_users[i].replace('\r', '')
+                reservoir[x] = user
             seqnum += 1
     f.write(str(seqnum) + ',' + str(reservoir[0]) + ',' + str(reservoir[20]) + ',' + str(reservoir[40]) + ',' + str(
         reservoir[60]) + ',' + str(reservoir[80]) + '\n')
 
 
 if __name__ == "__main__":
-    # time python task3.py $ASNLIB/publicdata/users.txt 100 30 task3.csv
+    # time python3 task3.py $ASNLIB/publicdata/users.txt 100 30 task3.csv
     start_time = time.time()
 
     # input_file = 'dataset/users.txt'
