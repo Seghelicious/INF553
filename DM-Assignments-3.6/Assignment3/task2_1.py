@@ -103,7 +103,7 @@ def write_to_file(output_file, prediction_list):
 
 start_time = time.time()
 
-# time /home/local/spark/latest/bin/spark-submit task2_1.py $ASNLIB/publicdata/yelp_train.csv $ASNLIB/publicdata/yelp_val.csv task2-output.csv
+# time /home/local/spark/latest/bin/spark-submit task2_1.py $ASNLIB/publicdata/yelp_train.csv $ASNLIB/publicdata/yelp_val.csv task2-output1a.csv
 input_file_train = sys.argv[1]
 input_file_test = sys.argv[2]
 output_file = sys.argv[3]
