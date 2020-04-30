@@ -5,9 +5,6 @@ import numpy as np
 import time
 
 
-# Dictonary struct : 0 - points, 1 - len, 2 - SUMi, 3 - SUM2, 4 - SD, 5 - Centroid
-
-
 def get_point_clusterid_map(ds_statistics, cs_statistics, rs):
     point_clusterid_map = {}
     for key in ds_statistics:
@@ -31,8 +28,8 @@ def output_intermediate(fout, load_instance):
         cs_clusters_count += 1
         cs_points_count += cs_summary[key][1]
     rs_points_count = len(RS_points)
-    print("Round " + str(load_instance + 1) + ": " + str(ds_points_count) + "," + str(cs_clusters_count) + "," + str(
-        cs_points_count) + "," + str(rs_points_count))
+    # print("Round " + str(load_instance + 1) + ": " + str(ds_points_count) + "," + str(cs_clusters_count) + "," + str(
+    #     cs_points_count) + "," + str(rs_points_count))
     fout.write(
         "Round " + str(load_instance + 1) + ": " + str(ds_points_count) + "," + str(cs_clusters_count) + "," + str(
             cs_points_count) + "," + str(rs_points_count) + "\n")
@@ -43,8 +40,10 @@ def output_cluster_info(fout, ds_summary, cs_summary, rs):
     point_clusterid_map = get_point_clusterid_map(ds_summary, cs_summary, rs)
     for point in sorted(point_clusterid_map.keys(), key=int):
         fout.write("\n" + str(point) + "," + str(point_clusterid_map[point]))
-    print(len(point_clusterid_map))
+    # print(len(point_clusterid_map))
 
+
+# Dictonary struct : 0 - points, 1 - len, 2 - SUMi, 3 - SUM2, 4 - SD, 5 - Centroid
 
 def generate_ds_summary(key, point_indices, points_array):
     ds_summary[key] = {}
@@ -73,26 +72,15 @@ def generate_cs_summary(key, point_indices, points_array):
     cs_summary[key][5] = cs_summary[key][2] / cs_summary[key][1]
 
 
-def update_ds_summary(pointid, newpoint, cluster_key):
-    ds_summary[cluster_key][0].append(pointid)
-    ds_summary[cluster_key][1] = ds_summary[cluster_key][1] + 1
+def update_summary(summary, pointid, newpoint, cluster_key):
+    summary[cluster_key][0].append(pointid)
+    summary[cluster_key][1] = summary[cluster_key][1] + 1
     for i in range(0, d):
-        ds_summary[cluster_key][2][i] += newpoint[i]
-        ds_summary[cluster_key][3][i] += newpoint[i] ** 2
-    ds_summary[cluster_key][4] = np.sqrt((ds_summary[cluster_key][3][:] / ds_summary[cluster_key][1]) - (
-            np.square(ds_summary[cluster_key][2][:]) / (ds_summary[cluster_key][1] ** 2)))
-    ds_summary[cluster_key][5] = ds_summary[cluster_key][2] / ds_summary[cluster_key][1]
-
-
-def update_cs_summary(pointid, newpoint, cluster_key):
-    cs_summary[cluster_key][0].append(pointid)
-    cs_summary[cluster_key][1] = cs_summary[cluster_key][1] + 1
-    for i in range(0, d):
-        cs_summary[cluster_key][2][i] += newpoint[i]
-        cs_summary[cluster_key][3][i] += newpoint[i] ** 2
-    cs_summary[cluster_key][4] = np.sqrt((cs_summary[cluster_key][3][:] / cs_summary[cluster_key][1]) - (
-            np.square(cs_summary[cluster_key][2][:]) / (cs_summary[cluster_key][1] ** 2)))
-    cs_summary[cluster_key][5] = cs_summary[cluster_key][2] / cs_summary[cluster_key][1]
+        summary[cluster_key][2][i] += newpoint[i]
+        summary[cluster_key][3][i] += newpoint[i] ** 2
+    summary[cluster_key][4] = np.sqrt((summary[cluster_key][3][:] / summary[cluster_key][1]) - (
+            np.square(summary[cluster_key][2][:]) / (summary[cluster_key][1] ** 2)))
+    summary[cluster_key][5] = summary[cluster_key][2] / summary[cluster_key][1]
 
 
 def merge_cs_clusters(key1, key2):
@@ -119,19 +107,18 @@ def merge_cs_with_ds(cs_key, ds_key):
 
 def get_cluster_dict(clusters):
     cluster_dict = {}
-    ctr = 0
-    for clusterid in clusters:
+    for i in range(len(clusters)):
+        clusterid = clusters[i]
         if clusterid in cluster_dict:
-            cluster_dict[clusterid].append(ctr)
+            cluster_dict[clusterid].append(i)
         else:
-            cluster_dict[clusterid] = [ctr]
-        ctr = ctr + 1
+            cluster_dict[clusterid] = [i]
     return cluster_dict
 
 
-def get_closest_cluster_id(summary):
-    closest_cluster_md = threshold_distance
-    closest_clusterid = -1
+def get_nearest_cluster_id(summary):
+    nearest_cluster_md = threshold_distance
+    nearest_clusterid = -1
     for key in summary.keys():
         std_dev = summary[key][4].astype(np.float)
         centroid = summary[key][5].astype(np.float)
@@ -139,64 +126,65 @@ def get_closest_cluster_id(summary):
         for dim in range(0, d):
             mahalanobis_distance += ((point[dim] - centroid[dim]) / std_dev[dim]) ** 2
         mahalanobis_distance = np.sqrt(mahalanobis_distance)
+        if mahalanobis_distance < nearest_cluster_md:
+            nearest_cluster_md = mahalanobis_distance
+            nearest_clusterid = key
+    return nearest_clusterid
 
-        if mahalanobis_distance < closest_cluster_md:
-            closest_cluster_md = mahalanobis_distance
-            closest_clusterid = key
-    return closest_clusterid
 
-
-def get_closest_cluster(summary1, summary2):
-    keys1 = summary1.keys()
-    keys2 = summary2.keys()
-    closest = {}
-    for x in keys1:
-        closest_cluster_md = threshold_distance
-        closest_clusterid = x
-        for y in keys2:
-            if x != y:
-                stddev1 = summary1[x][4]
-                stddev2 = summary2[y][4]
-                centroid1 = summary1[x][5]
-                centroid2 = summary2[y][5]
+def get_nearest_cluster_dict(summary1, summary2):
+    cluster1_keys = summary1.keys()
+    cluster2_keys = summary2.keys()
+    nearest_cluster_id_map = {}
+    for key1 in cluster1_keys:
+        nearest_cluster_md = threshold_distance
+        nearest_clusterid = key1
+        for key2 in cluster2_keys:
+            if key1 != key2:
+                stddev1 = summary1[key1][4]
+                centroid1 = summary1[key1][5]
+                stddev2 = summary2[key2][4]
+                centroid2 = summary2[key2][5]
                 md1 = 0
                 md2 = 0
                 for dim in range(0, d):
+                    # if stddev2[dim] != 0 and stddev1[dim] != 0:
                     md1 += ((centroid1[dim] - centroid2[dim]) / stddev2[dim]) ** 2
                     md2 += ((centroid2[dim] - centroid1[dim]) / stddev1[dim]) ** 2
-                md1 = np.sqrt(md1)
-                md2 = np.sqrt(md2)
-                mahalanobis_distance = min(md1, md2)
-                if mahalanobis_distance < closest_cluster_md:
-                    closest_cluster_md = mahalanobis_distance
-                    closest_clusterid = y
-        closest[x] = closest_clusterid
-    return closest
+                mahalanobis_distance = min(np.sqrt(md1), np.sqrt(md2))
+                if mahalanobis_distance < nearest_cluster_md:
+                    nearest_cluster_md = mahalanobis_distance
+                    nearest_clusterid = key2
+        nearest_cluster_id_map[key1] = nearest_clusterid
+    return nearest_cluster_id_map
 
+
+# time python3 task.py $ASNLIB/publicdata/hw6_clustering.txt 10 output.csv
 
 start = time.time()
 
-data_file = 'dataset/hw6_clustering.txt'
-num_clusters = 10
-out_file = 'output/output.csv'
+# data_file = 'dataset/hw6_clustering.txt'
+# num_clusters = 10
+# out_file = 'output/output.csv'
 
-# data_file = sys.argv[1]
-# num_clusters = int(sys.argv[2])
-# out_file = sys.argv[3]
+data_file = sys.argv[1]
+num_clusters = int(sys.argv[2])
+out_file = sys.argv[3]
 
-fout = open(out_file, "w")
 file = open(data_file, "r")
 data = np.array(file.readlines())
 file.close()
+fout = open(out_file, "w")
+
 final_round = 4
 
 # Step 1. Load 20% of the data randomly.
 
 one_fifth = int(len(data) * 20 / 100)
 initial_sample = np.random.choice(a=data, size=one_fifth, replace=False)
-ctr_index_map = {}  # ctr -> pointid
-index_point_map = {}  # pointid -> point
-point_index_map = {}  # point -> pointid
+ctr_index_map = {}  # ctr -> point index
+index_point_map = {}  # point index -> point
+point_index_map = {}  # point -> point index
 initial_data = []
 
 DS_ctr = 0
@@ -220,14 +208,13 @@ kmeans = KMeans(n_clusters=5 * num_clusters, random_state=0)
 clusters_extra = kmeans.fit_predict(points_array)
 clusters = {}
 
-ctr = 0
-for clusterid in clusters_extra:
-    point = initial_data[ctr]
+for i in range(len(clusters_extra)):
+    point = initial_data[i]
+    clusterid = clusters_extra[i]
     if clusterid in clusters:
         clusters[clusterid].append(point)
     else:
         clusters[clusterid] = [point]
-    ctr = ctr + 1
 
 RS = {}  # index <-> point
 ds_summary = {}
@@ -235,7 +222,6 @@ cs_summary = {}
 
 # Step 3. In the K-Means result from Step 2, move all the clusters that contain only one point to RS (outliers).
 
-ctr = 0
 for key in clusters.keys():
     if len(clusters[key]) == 1:
         point = clusters[key][0]
@@ -244,7 +230,6 @@ for key in clusters.keys():
         initial_data.remove(point)
         for l in range(pos, len(ctr_index_map) - 1):
             ctr_index_map[l] = ctr_index_map[l + 1]
-        ctr = ctr + 1
 
 # Step 4. Run K-Means again to cluster the rest of the data points with K = the number of input clusters.
 
@@ -312,27 +297,24 @@ for load_instance in range(1, 5):
     # Step 9. For the new points that are not assigned to DS clusters, using the Mahalanobis Distance and assign the points to the nearest CS clusters if the distance is < 2√𝑑
     # Step 10. For the new points that are not assigned to a DS cluster or a CS cluster, assign them to RS.
 
-    ctr = 0
-    for l in new_points_array:
-        point = l.astype(np.float)
-        index = ctr_index_map[last_ctr + ctr]
-        closest_clusterid = get_closest_cluster_id(ds_summary)
+    for i in range(len(new_points_array)):
+        x = new_points_array[i]
+        point = x.astype(np.float)
+        index = ctr_index_map[last_ctr + i]
+        closest_clusterid = get_nearest_cluster_id(ds_summary)
 
         if closest_clusterid > -1:
             # Step 8
-            update_ds_summary(index, point, closest_clusterid)
+            update_summary(ds_summary, index, point, closest_clusterid)
         else:
-            closest_clusterid = get_closest_cluster_id(cs_summary)
-
+            closest_clusterid = get_nearest_cluster_id(cs_summary)
             if closest_clusterid > -1:
                 # Step 9
-                update_cs_summary(index, point, closest_clusterid)
+                update_summary(cs_summary, index, point, closest_clusterid)
             else:
                 # Step 10
-                RS[index] = list(l)
-                RS_points.append(list(l))
-        ctr = ctr + 1
-
+                RS[index] = list(x)
+                RS_points.append(list(x))
 
     # Step 11. Run K-Means on the RS with a large K to generate CS (clusters with more than one points) and RS (clusters with only one point).
 
@@ -368,7 +350,7 @@ for load_instance in range(1, 5):
     # Step 12. Merge CS clusters that have a Mahalanobis Distance < 2√𝑑.
 
     cs_keys = cs_summary.keys()
-    closest_cluster_map = get_closest_cluster(cs_summary, cs_summary)
+    closest_cluster_map = get_nearest_cluster_dict(cs_summary, cs_summary)
 
     for cs_key in closest_cluster_map.keys():
         if cs_key != closest_cluster_map[cs_key] and closest_cluster_map[cs_key] in cs_summary.keys() and cs_key in cs_summary.keys():
@@ -378,7 +360,7 @@ for load_instance in range(1, 5):
     # If this is the last run , merge CS clusters with DS clusters that have a Mahalanobis Distance < 2√𝑑.
 
     if load_instance == final_round:
-        closest_cluster_map = get_closest_cluster(cs_summary, ds_summary)
+        closest_cluster_map = get_nearest_cluster_dict(cs_summary, ds_summary)
         for cs_key in closest_cluster_map.keys():
             if closest_cluster_map[cs_key] in ds_summary.keys() and cs_key in cs_summary.keys():
                 merge_cs_with_ds(cs_key, closest_cluster_map[cs_key])
