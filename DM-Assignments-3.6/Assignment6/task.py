@@ -1,75 +1,82 @@
 import math
 import sys
 from sklearn.cluster import KMeans
+from sklearn.metrics import normalized_mutual_info_score
 import numpy as np
 import time
-
-
-def get_point_clusterid_map(ds_statistics, cs_statistics, rs):
-    point_clusterid_map = {}
-    for key in ds_statistics:
-        for point in ds_statistics[key][0]:
-            point_clusterid_map[point] = key
-    for key in cs_statistics:
-        for point in cs_statistics[key][0]:
-            point_clusterid_map[point] = -1
-    for point in rs:
-        point_clusterid_map[point] = -1
-    return point_clusterid_map
 
 
 def output_intermediate(fout, load_instance):
     ds_points_count = 0
     cs_clusters_count = 0
     cs_points_count = 0
-    for key in ds_summary.keys():
-        ds_points_count += ds_summary[key][1]
-    for key in cs_summary.keys():
+    for key in discard_set.keys():
+        ds_points_count += discard_set[key][1]
+    for key in compression_set.keys():
         cs_clusters_count += 1
-        cs_points_count += cs_summary[key][1]
-    rs_points_count = len(RS_points)
-    # print("Round " + str(load_instance + 1) + ": " + str(ds_points_count) + "," + str(cs_clusters_count) + "," + str(
-    #     cs_points_count) + "," + str(rs_points_count))
+        cs_points_count += compression_set[key][1]
+    rs_points_count = len(retained_set_points)
     fout.write(
         "Round " + str(load_instance + 1) + ": " + str(ds_points_count) + "," + str(cs_clusters_count) + "," + str(
             cs_points_count) + "," + str(rs_points_count) + "\n")
+
+
+def get_point_clusterid_map(ds_summary, cs_summary, rs):
+    point_clusterid_map = {}
+    ds_points_count = 0
+    cs_points_count = 0
+    rs_points_count = 0
+    for key in ds_summary:
+        for point in ds_summary[key][0]:
+            point_clusterid_map[point] = key
+            ds_points_count += 1
+    for key in cs_summary:
+        for point in cs_summary[key][0]:
+            point_clusterid_map[point] = -1
+            cs_points_count += 1
+    for point in rs:
+        point_clusterid_map[point] = -1
+        rs_points_count += 1
+    print("DS count : " + str(ds_points_count) + " CS count : " + str(cs_points_count) + " RS count : " + str(rs_points_count))
+    print("Percentage of discard points after last round : " + str(ds_points_count * 100 / (ds_points_count + cs_points_count + rs_points_count)))
+    return point_clusterid_map
 
 
 def output_cluster_info(fout, ds_summary, cs_summary, rs):
     fout.write("\nThe clustering results: ")
     point_clusterid_map = get_point_clusterid_map(ds_summary, cs_summary, rs)
     for point in sorted(point_clusterid_map.keys(), key=int):
+        clustered_data.append([point, point_clusterid_map[point]])
         fout.write("\n" + str(point) + "," + str(point_clusterid_map[point]))
-    # print(len(point_clusterid_map))
 
 
 # Dictonary struct : 0 - points, 1 - len, 2 - SUMi, 3 - SUM2, 4 - SD, 5 - Centroid
 
-def generate_ds_summary(key, point_indices, points_array):
-    ds_summary[key] = {}
-    ds_summary[key][0] = []
+def create_discard_set(key, point_indices, points_array):
+    discard_set[key] = {}
+    discard_set[key][0] = []
     for i in point_indices:
-        ds_summary[key][0].append(ctr_index_map[i])
-    ds_summary[key][1] = len(ds_summary[key][0])
-    ds_summary[key][2] = np.sum(points_array[point_indices, :].astype(np.float), axis=0)
-    ds_summary[key][3] = np.sum((points_array[point_indices, :].astype(np.float)) ** 2, axis=0)
-    ds_summary[key][4] = np.sqrt((ds_summary[key][3][:] / ds_summary[key][1]) - (
-            np.square(ds_summary[key][2][:]) / (ds_summary[key][1] ** 2)))
-    ds_summary[key][5] = ds_summary[key][2] / ds_summary[key][1]
+        discard_set[key][0].append(pctr_index_map[i])
+    discard_set[key][1] = len(discard_set[key][0])
+    discard_set[key][2] = np.sum(points_array[point_indices, :].astype(np.float), axis=0)
+    discard_set[key][3] = np.sum((points_array[point_indices, :].astype(np.float)) ** 2, axis=0)
+    discard_set[key][4] = np.sqrt((discard_set[key][3][:] / discard_set[key][1]) - (
+            np.square(discard_set[key][2][:]) / (discard_set[key][1] ** 2)))
+    discard_set[key][5] = discard_set[key][2] / discard_set[key][1]
 
 
-def generate_cs_summary(key, point_indices, points_array):
-    cs_summary[key] = {}
-    cs_summary[key][0] = []
+def create_compression_set(key, point_indices, points_array):
+    compression_set[key] = {}
+    compression_set[key][0] = []
     for i in point_indices:
-        pointid = list(RS.keys())[list(RS.values()).index(RS_points[i])]
-        cs_summary[key][0].append(pointid)
-    cs_summary[key][1] = len(cs_summary[key][0])
-    cs_summary[key][2] = np.sum(points_array[point_indices, :].astype(np.float), axis=0)
-    cs_summary[key][3] = np.sum((points_array[point_indices, :].astype(np.float)) ** 2, axis=0)
-    cs_summary[key][4] = np.sqrt((cs_summary[key][3][:] / cs_summary[key][1]) - (
-            np.square(cs_summary[key][2][:]) / (cs_summary[key][1] ** 2)))
-    cs_summary[key][5] = cs_summary[key][2] / cs_summary[key][1]
+        pointid = list(retained_set_dict.keys())[list(retained_set_dict.values()).index(retained_set_points[i])]
+        compression_set[key][0].append(pointid)
+    compression_set[key][1] = len(compression_set[key][0])
+    compression_set[key][2] = np.sum(points_array[point_indices, :].astype(np.float), axis=0)
+    compression_set[key][3] = np.sum((points_array[point_indices, :].astype(np.float)) ** 2, axis=0)
+    compression_set[key][4] = np.sqrt((compression_set[key][3][:] / compression_set[key][1]) - (
+            np.square(compression_set[key][2][:]) / (compression_set[key][1] ** 2)))
+    compression_set[key][5] = compression_set[key][2] / compression_set[key][1]
 
 
 def update_summary(summary, pointid, newpoint, cluster_key):
@@ -84,25 +91,25 @@ def update_summary(summary, pointid, newpoint, cluster_key):
 
 
 def merge_cs_clusters(key1, key2):
-    cs_summary[key1][0].extend(cs_summary[key2][0])
-    cs_summary[key1][1] = cs_summary[key1][1] + cs_summary[key2][1]
+    compression_set[key1][0].extend(compression_set[key2][0])
+    compression_set[key1][1] = compression_set[key1][1] + compression_set[key2][1]
     for i in range(0, d):
-        cs_summary[key1][2][i] += cs_summary[key2][2][i]
-        cs_summary[key1][3][i] += cs_summary[key2][3][i]
-    cs_summary[key1][4] = np.sqrt((cs_summary[key1][3][:] / cs_summary[key1][1]) - (
-            np.square(cs_summary[key1][2][:]) / (cs_summary[key1][1] ** 2)))
-    cs_summary[key1][5] = cs_summary[key1][2] / cs_summary[key1][1]
+        compression_set[key1][2][i] += compression_set[key2][2][i]
+        compression_set[key1][3][i] += compression_set[key2][3][i]
+    compression_set[key1][4] = np.sqrt((compression_set[key1][3][:] / compression_set[key1][1]) - (
+            np.square(compression_set[key1][2][:]) / (compression_set[key1][1] ** 2)))
+    compression_set[key1][5] = compression_set[key1][2] / compression_set[key1][1]
 
 
 def merge_cs_with_ds(cs_key, ds_key):
-    ds_summary[ds_key][0].extend(cs_summary[cs_key][0])
-    ds_summary[ds_key][1] = ds_summary[ds_key][1] + cs_summary[cs_key][1]
+    discard_set[ds_key][0].extend(compression_set[cs_key][0])
+    discard_set[ds_key][1] = discard_set[ds_key][1] + compression_set[cs_key][1]
     for i in range(0, d):
-        ds_summary[ds_key][2][i] += cs_summary[cs_key][2][i]
-        ds_summary[ds_key][3][i] += cs_summary[cs_key][3][i]
-    ds_summary[ds_key][4] = np.sqrt((ds_summary[ds_key][3][:] / ds_summary[ds_key][1]) - (
-            np.square(ds_summary[ds_key][2][:]) / (ds_summary[ds_key][1] ** 2)))
-    ds_summary[ds_key][5] = ds_summary[ds_key][2] / ds_summary[ds_key][1]
+        discard_set[ds_key][2][i] += compression_set[cs_key][2][i]
+        discard_set[ds_key][3][i] += compression_set[cs_key][3][i]
+    discard_set[ds_key][4] = np.sqrt((discard_set[ds_key][3][:] / discard_set[ds_key][1]) - (
+            np.square(discard_set[ds_key][2][:]) / (discard_set[ds_key][1] ** 2)))
+    discard_set[ds_key][5] = discard_set[ds_key][2] / discard_set[ds_key][1]
 
 
 def get_cluster_dict(clusters):
@@ -148,9 +155,9 @@ def get_nearest_cluster_dict(summary1, summary2):
                 md1 = 0
                 md2 = 0
                 for dim in range(0, d):
-                    # if stddev2[dim] != 0 and stddev1[dim] != 0:
-                    md1 += ((centroid1[dim] - centroid2[dim]) / stddev2[dim]) ** 2
-                    md2 += ((centroid2[dim] - centroid1[dim]) / stddev1[dim]) ** 2
+                    if stddev2[dim] != 0 and stddev1[dim] != 0:
+                        md1 += ((centroid1[dim] - centroid2[dim]) / stddev2[dim]) ** 2
+                        md2 += ((centroid2[dim] - centroid1[dim]) / stddev1[dim]) ** 2
                 mahalanobis_distance = min(np.sqrt(md1), np.sqrt(md2))
                 if mahalanobis_distance < nearest_cluster_md:
                     nearest_cluster_md = mahalanobis_distance
@@ -161,46 +168,49 @@ def get_nearest_cluster_dict(summary1, summary2):
 
 # time python3 task.py $ASNLIB/publicdata/hw6_clustering.txt 10 output.csv
 
-start = time.time()
+start_time = time.time()
 
-# data_file = 'dataset/hw6_clustering.txt'
+# input_file = 'dataset/hw6_clustering.txt'
 # num_clusters = 10
-# out_file = 'output/output.csv'
+# output_file = 'output/output.csv'
 
-data_file = sys.argv[1]
+input_file = sys.argv[1]
 num_clusters = int(sys.argv[2])
-out_file = sys.argv[3]
+output_file = sys.argv[3]
 
-file = open(data_file, "r")
-data = np.array(file.readlines())
-file.close()
-fout = open(out_file, "w")
-
-final_round = 4
+ground_truth = np.loadtxt(input_file, delimiter=",")
+clustered_data = []
+fin = open(input_file, "r")
+data = np.array(fin.readlines())
+fin.close()
+fout = open(output_file, "w")
 
 # Step 1. Load 20% of the data randomly.
 
 one_fifth = int(len(data) * 20 / 100)
-initial_sample = np.random.choice(a=data, size=one_fifth, replace=False)
-ctr_index_map = {}  # ctr -> point index
-index_point_map = {}  # point index -> point
-point_index_map = {}  # point -> point index
-initial_data = []
 
-DS_ctr = 0
-for l in initial_sample:
-    line = l.replace("\n", "").split(",")
+start_index = 0
+end_index = one_fifth
+initial_sample = data[start_index:end_index]
+print("Round : 0, Start index : " + str(start_index) + ", End index : " + str(end_index))
+
+pctr_index_map = {}
+point_index_map = {}
+first_load = []
+
+point_ctr = 0
+for line in initial_sample:
+    line = line.split(",")
     index = line[0]
     point = line[2:]
-    initial_data.append(point)
-    ctr_index_map[DS_ctr] = index
-    index_point_map[index] = point
+    first_load.append(point)
+    pctr_index_map[point_ctr] = index
     point_index_map[str(point)] = index
-    DS_ctr = DS_ctr + 1
+    point_ctr = point_ctr + 1
 
-d = len(initial_data[0])
+d = len(first_load[0])
 threshold_distance = 2 * math.sqrt(d)
-points_array = np.array(initial_data)
+points_array = np.array(first_load)
 
 # Step 2. Run K-Means (e.g., from sklearn) with a large K (e.g., 5 times of the number of the input clusters) on the data in memory using the Euclidean distance as the similarity measurement.
 
@@ -209,89 +219,94 @@ clusters_extra = kmeans.fit_predict(points_array)
 clusters = {}
 
 for i in range(len(clusters_extra)):
-    point = initial_data[i]
+    point = first_load[i]
     clusterid = clusters_extra[i]
     if clusterid in clusters:
         clusters[clusterid].append(point)
     else:
         clusters[clusterid] = [point]
 
-RS = {}  # index <-> point
-ds_summary = {}
-cs_summary = {}
+retained_set_dict = {}  # index <-> point
 
 # Step 3. In the K-Means result from Step 2, move all the clusters that contain only one point to RS (outliers).
 
 for key in clusters.keys():
     if len(clusters[key]) == 1:
         point = clusters[key][0]
-        pos = initial_data.index(point)
-        RS[ctr_index_map[pos]] = point  # setting RS
-        initial_data.remove(point)
-        for l in range(pos, len(ctr_index_map) - 1):
-            ctr_index_map[l] = ctr_index_map[l + 1]
+        pos = first_load.index(point)
+        retained_set_dict[pctr_index_map[pos]] = point
+        first_load.remove(point)
+        for l in range(pos, len(pctr_index_map) - 1):
+            pctr_index_map[l] = pctr_index_map[l + 1]
 
 # Step 4. Run K-Means again to cluster the rest of the data points with K = the number of input clusters.
 
-points_array_without_RS = np.array(initial_data)
+points_array_without_RS = np.array(first_load)
 kmeans = KMeans(n_clusters=num_clusters, random_state=0)
 clusters = get_cluster_dict(kmeans.fit_predict(points_array_without_RS))
 
 # Step 5. Use the K-Means result from Step 4 to generate the DS clusters (i.e., discard their points and generate statistics).
 
+discard_set = {}
 for key in clusters.keys():
-    generate_ds_summary(key, clusters[key], points_array_without_RS)
+    create_discard_set(key, clusters[key], points_array_without_RS)
 
 # The initialization of DS has finished, so far, you have K numbers of DS clusters (from Step 5) and some numbers of RS (from Step 3).
 
 # Step 6. Run K-Means on the points in the RS with a large K to generate CS (clusters with more than one points) and RS (clusters with only one point).
-RS_points = []
-for key in RS.keys():
-    RS_points.append(RS[key])
 
-rs_points_array = np.array(RS_points)
-kmeans = KMeans(n_clusters=int(len(RS_points) / 2 + 1), random_state=0)
+retained_set_points = []
+for key in retained_set_dict.keys():
+    retained_set_points.append(retained_set_dict[key])
+
+rs_points_array = np.array(retained_set_points)
+kmeans = KMeans(n_clusters=int(len(retained_set_points) / 2 + 1), random_state=0)
 cs_clusters = get_cluster_dict(kmeans.fit_predict(rs_points_array))
 
+compression_set = {}
 for key in cs_clusters.keys():
     if len(cs_clusters[key]) > 1:
-        generate_cs_summary(key, cs_clusters[key], rs_points_array)
+        create_compression_set(key, cs_clusters[key], rs_points_array)
 
 for key in cs_clusters.keys():
     if len(cs_clusters[key]) > 1:
         for i in cs_clusters[key]:
-            point_to_remove = list(RS.keys())[list(RS.values()).index(RS_points[i])]
-            del RS[point_to_remove]
+            point_to_remove = list(retained_set_dict.keys())[list(retained_set_dict.values()).index(retained_set_points[i])]
+            del retained_set_dict[point_to_remove]
 
-RS_points = []
-for key in RS.keys():
-    RS_points.append(RS[key])
+retained_set_points = []
+for key in retained_set_dict.keys():
+    retained_set_points.append(retained_set_dict[key])
 
 fout.write("The intermediate results:\n")
 output_intermediate(fout, 0)
 
 # Step 7. Load another 20% of the data randomly.
-
-for load_instance in range(1, 5):
+final_round = 4
+for num_round in range(1, 5):
+    start_index = end_index
     new_data = []
-    if load_instance == final_round:
-        new_data = np.random.choice(a=data, size=len(data) - one_fifth * 4, replace=False)
+    if num_round == final_round:
+        end_index = len(data)
+        new_data = data[start_index:end_index]
     else:
-        new_data = np.random.choice(a=data, size=one_fifth, replace=False)
+        end_index = start_index + one_fifth
+        new_data = data[start_index:end_index]
 
-    new_points = []
-    last_ctr = DS_ctr
-    for l in new_data:
-        line = l.replace("\n", "").split(",")
+    print("Round : " + str(num_round) + ", Start index : " + str(start_index) + ", End index : " + str(end_index))
+
+    points = []
+    last_ctr = point_ctr
+    for line in new_data:
+        line = line.split(",")
         index = line[0]
         point = line[2:]
-        new_points.append(point)
-        ctr_index_map[DS_ctr] = index
-        index_point_map[index] = point
+        points.append(point)
+        pctr_index_map[point_ctr] = index
         point_index_map[str(point)] = index
-        DS_ctr = DS_ctr + 1
+        point_ctr = point_ctr + 1
 
-    new_points_array = np.array(new_points)
+    new_points_array = np.array(points)
 
     # Step 8. For the new points, compare them to each of the DS using the Mahalanobis Distance and assign them to the nearest DS clusters if the distance is < 2√𝑑.
     # Step 9. For the new points that are not assigned to DS clusters, using the Mahalanobis Distance and assign the points to the nearest CS clusters if the distance is < 2√𝑑
@@ -300,85 +315,76 @@ for load_instance in range(1, 5):
     for i in range(len(new_points_array)):
         x = new_points_array[i]
         point = x.astype(np.float)
-        index = ctr_index_map[last_ctr + i]
-        closest_clusterid = get_nearest_cluster_id(ds_summary)
+        index = pctr_index_map[last_ctr + i]
+        closest_clusterid = get_nearest_cluster_id(discard_set)
 
         if closest_clusterid > -1:
             # Step 8
-            update_summary(ds_summary, index, point, closest_clusterid)
+            update_summary(discard_set, index, point, closest_clusterid)
         else:
-            closest_clusterid = get_nearest_cluster_id(cs_summary)
+            closest_clusterid = get_nearest_cluster_id(compression_set)
             if closest_clusterid > -1:
                 # Step 9
-                update_summary(cs_summary, index, point, closest_clusterid)
+                update_summary(compression_set, index, point, closest_clusterid)
             else:
                 # Step 10
-                RS[index] = list(x)
-                RS_points.append(list(x))
+                retained_set_dict[index] = list(x)
+                retained_set_points.append(list(x))
 
     # Step 11. Run K-Means on the RS with a large K to generate CS (clusters with more than one points) and RS (clusters with only one point).
 
-    new_points_array = np.array(RS_points)
-    kmeans = KMeans(n_clusters=int(len(RS_points) / 2 + 1), random_state=0)
+    new_points_array = np.array(retained_set_points)
+    kmeans = KMeans(n_clusters=int(len(retained_set_points) / 2 + 1), random_state=0)
 
     cs_clusters = get_cluster_dict(kmeans.fit_predict(new_points_array))
 
     for key in cs_clusters.keys():
         if len(cs_clusters[key]) > 1:
             k = 0
-            if key in cs_summary.keys():
-                while k in cs_summary:
+            if key in compression_set.keys():
+                while k in compression_set:
                     k = k + 1
             else:
                 k = key
-
-            generate_cs_summary(k, cs_clusters[key], new_points_array)
+            create_compression_set(k, cs_clusters[key], new_points_array)
 
     for key in cs_clusters.keys():
         if len(cs_clusters[key]) > 1:
             for i in cs_clusters[key]:
-                # point_to_remove = list(RS.keys())[list(RS.values()).index(RS_points[i])]
-                # del RS[point_to_remove]
-                point_to_remove = point_index_map[str(RS_points[i])]
-                if point_to_remove in RS.keys():
-                    del RS[point_to_remove]
+                point_to_remove = point_index_map[str(retained_set_points[i])]
+                if point_to_remove in retained_set_dict.keys():
+                    del retained_set_dict[point_to_remove]
 
-    RS_points = []
-    for key in RS.keys():
-        RS_points.append(RS[key])
+    retained_set_points = []
+    for key in retained_set_dict.keys():
+        retained_set_points.append(retained_set_dict[key])
 
     # Step 12. Merge CS clusters that have a Mahalanobis Distance < 2√𝑑.
 
-    cs_keys = cs_summary.keys()
-    closest_cluster_map = get_nearest_cluster_dict(cs_summary, cs_summary)
+    cs_keys = compression_set.keys()
+    closest_cluster_map = get_nearest_cluster_dict(compression_set, compression_set)
 
     for cs_key in closest_cluster_map.keys():
-        if cs_key != closest_cluster_map[cs_key] and closest_cluster_map[cs_key] in cs_summary.keys() and cs_key in cs_summary.keys():
+        if cs_key != closest_cluster_map[cs_key] and closest_cluster_map[cs_key] in compression_set.keys() and cs_key in compression_set.keys():
             merge_cs_clusters(cs_key, closest_cluster_map[cs_key])
-            del cs_summary[closest_cluster_map[cs_key]]
+            del compression_set[closest_cluster_map[cs_key]]
 
     # If this is the last run , merge CS clusters with DS clusters that have a Mahalanobis Distance < 2√𝑑.
 
-    if load_instance == final_round:
-        closest_cluster_map = get_nearest_cluster_dict(cs_summary, ds_summary)
+    if num_round == final_round:
+        closest_cluster_map = get_nearest_cluster_dict(compression_set, discard_set)
         for cs_key in closest_cluster_map.keys():
-            if closest_cluster_map[cs_key] in ds_summary.keys() and cs_key in cs_summary.keys():
+            if closest_cluster_map[cs_key] in discard_set.keys() and cs_key in compression_set.keys():
                 merge_cs_with_ds(cs_key, closest_cluster_map[cs_key])
-                del cs_summary[cs_key]
+                del compression_set[cs_key]
 
-    output_intermediate(fout, load_instance)
+    output_intermediate(fout, num_round)
 
-output_cluster_info(fout, ds_summary, cs_summary, RS)
-
+output_cluster_info(fout, discard_set, compression_set, retained_set_dict)
 fout.close()
 
-end = time.time()
-print("Duration: " + str(end - start))
+clustered_data = np.array(clustered_data)
+score = normalized_mutual_info_score(ground_truth[:, 1], clustered_data[:, 1])
+print("Normalized Score: ", score)
 
-# Round 1: 64457,2,4,1
-# Round 2: 128910,5,12,2
-# Round 3: 193356,6,27,3
-# Round 4: 257800,5,46,2
-# Round 5: 322256,3,54,2
-# 216686
-# Duration: 71.13698983192444
+print("Duration : ", time.time() - start_time)
