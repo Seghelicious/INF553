@@ -170,13 +170,13 @@ def get_nearest_cluster_dict(summary1, summary2):
 
 start_time = time.time()
 
-# input_file = 'dataset/hw6_clustering.txt'
-# num_clusters = 10
-# output_file = 'output/output.csv'
+input_file = 'dataset/hw6_clustering.txt'
+num_clusters = 10
+output_file = 'output/output.csv'
 
-input_file = sys.argv[1]
-num_clusters = int(sys.argv[2])
-output_file = sys.argv[3]
+# input_file = sys.argv[1]
+# num_clusters = int(sys.argv[2])
+# output_file = sys.argv[3]
 
 ground_truth = np.loadtxt(input_file, delimiter=",")
 clustered_data = []
@@ -192,7 +192,6 @@ one_fifth = int(len(data) * 20 / 100)
 start_index = 0
 end_index = one_fifth
 initial_sample = data[start_index:end_index]
-print("Round : 0, Start index : " + str(start_index) + ", End index : " + str(end_index))
 
 pctr_index_map = {}
 point_index_map = {}
@@ -292,8 +291,6 @@ for num_round in range(1, 5):
     else:
         end_index = start_index + one_fifth
         new_data = data[start_index:end_index]
-
-    print("Round : " + str(num_round) + ", Start index : " + str(start_index) + ", End index : " + str(end_index))
 
     points = []
     last_ctr = point_ctr
