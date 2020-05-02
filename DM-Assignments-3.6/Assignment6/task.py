@@ -23,22 +23,22 @@ def output_intermediate(fout, load_instance):
 
 def get_point_clusterid_map(ds_summary, cs_summary, rs):
     point_clusterid_map = {}
-    ds_points_count = 0
-    cs_points_count = 0
-    rs_points_count = 0
+    # ds_points_count = 0
+    # cs_points_count = 0
+    # rs_points_count = 0
     for key in ds_summary:
         for point in ds_summary[key][0]:
             point_clusterid_map[point] = key
-            ds_points_count += 1
+            # ds_points_count += 1
     for key in cs_summary:
         for point in cs_summary[key][0]:
             point_clusterid_map[point] = -1
-            cs_points_count += 1
+            # cs_points_count += 1
     for point in rs:
         point_clusterid_map[point] = -1
-        rs_points_count += 1
-    print("DS count : " + str(ds_points_count) + " CS count : " + str(cs_points_count) + " RS count : " + str(rs_points_count))
-    print("Percentage of discard points after last round : " + str(ds_points_count * 100 / (ds_points_count + cs_points_count + rs_points_count)))
+        # rs_points_count += 1
+    # print("DS count : " + str(ds_points_count) + " CS count : " + str(cs_points_count) + " RS count : " + str(rs_points_count))
+    # print("Percentage of discard points after last round : " + str(ds_points_count * 100 / (ds_points_count + cs_points_count + rs_points_count)))
     return point_clusterid_map
 
 
@@ -46,7 +46,7 @@ def output_cluster_info(fout, ds_summary, cs_summary, rs):
     fout.write("\nThe clustering results: ")
     point_clusterid_map = get_point_clusterid_map(ds_summary, cs_summary, rs)
     for point in sorted(point_clusterid_map.keys(), key=int):
-        clustered_data.append([point, point_clusterid_map[point]])
+        # clustered_data.append([point, point_clusterid_map[point]])
         fout.write("\n" + str(point) + "," + str(point_clusterid_map[point]))
 
 
@@ -79,8 +79,8 @@ def create_compression_set(key, point_indices, points_array):
     compression_set[key][5] = compression_set[key][2] / compression_set[key][1]
 
 
-def update_summary(summary, pointid, newpoint, cluster_key):
-    summary[cluster_key][0].append(pointid)
+def update_summary(summary, index, newpoint, cluster_key):
+    summary[cluster_key][0].append(index)
     summary[cluster_key][1] = summary[cluster_key][1] + 1
     for i in range(0, d):
         summary[cluster_key][2][i] += newpoint[i]
@@ -90,15 +90,15 @@ def update_summary(summary, pointid, newpoint, cluster_key):
     summary[cluster_key][5] = summary[cluster_key][2] / summary[cluster_key][1]
 
 
-def merge_cs_clusters(key1, key2):
-    compression_set[key1][0].extend(compression_set[key2][0])
-    compression_set[key1][1] = compression_set[key1][1] + compression_set[key2][1]
+def merge_cs_clusters(cs1_key, cs2_key):
+    compression_set[cs1_key][0].extend(compression_set[cs2_key][0])
+    compression_set[cs1_key][1] = compression_set[cs1_key][1] + compression_set[cs2_key][1]
     for i in range(0, d):
-        compression_set[key1][2][i] += compression_set[key2][2][i]
-        compression_set[key1][3][i] += compression_set[key2][3][i]
-    compression_set[key1][4] = np.sqrt((compression_set[key1][3][:] / compression_set[key1][1]) - (
-            np.square(compression_set[key1][2][:]) / (compression_set[key1][1] ** 2)))
-    compression_set[key1][5] = compression_set[key1][2] / compression_set[key1][1]
+        compression_set[cs1_key][2][i] += compression_set[cs2_key][2][i]
+        compression_set[cs1_key][3][i] += compression_set[cs2_key][3][i]
+    compression_set[cs1_key][4] = np.sqrt((compression_set[cs1_key][3][:] / compression_set[cs1_key][1]) - (
+            np.square(compression_set[cs1_key][2][:]) / (compression_set[cs1_key][1] ** 2)))
+    compression_set[cs1_key][5] = compression_set[cs1_key][2] / compression_set[cs1_key][1]
 
 
 def merge_cs_with_ds(cs_key, ds_key):
@@ -123,7 +123,7 @@ def get_cluster_dict(clusters):
     return cluster_dict
 
 
-def get_nearest_cluster_id(summary):
+def get_nearest_cluster_id(point, summary):
     nearest_cluster_md = threshold_distance
     nearest_clusterid = -1
     for key in summary.keys():
@@ -166,26 +166,26 @@ def get_nearest_cluster_dict(summary1, summary2):
     return nearest_cluster_id_map
 
 
-# time python3 task.py $ASNLIB/publicdata/hw6_clustering.txt 10 output.csv
+# time /home/local/spark/latest/bin/spark-submit task.py $ASNLIB/publicdata/hw6_clustering.txt 10 output.csv
 
 start_time = time.time()
 
-input_file = 'dataset/hw6_clustering.txt'
-num_clusters = 10
-output_file = 'output/output.csv'
+# input_file = 'dataset/hw6_clustering.txt'
+# num_clusters = 10
+# output_file = 'output/output.csv'
 
-# input_file = sys.argv[1]
-# num_clusters = int(sys.argv[2])
-# output_file = sys.argv[3]
+input_file = sys.argv[1]
+num_clusters = int(sys.argv[2])
+output_file = sys.argv[3]
 
-ground_truth = np.loadtxt(input_file, delimiter=",")
-clustered_data = []
+# ground_truth = np.loadtxt(input_file, delimiter=",")
+# clustered_data = []
 fin = open(input_file, "r")
 data = np.array(fin.readlines())
 fin.close()
 fout = open(output_file, "w")
 
-# Step 1. Load 20% of the data randomly.
+# Step 1. Load 20% of the data.
 
 one_fifth = int(len(data) * 20 / 100)
 
@@ -225,10 +225,9 @@ for i in range(len(clusters_extra)):
     else:
         clusters[clusterid] = [point]
 
-retained_set_dict = {}  # index <-> point
-
 # Step 3. In the K-Means result from Step 2, move all the clusters that contain only one point to RS (outliers).
 
+retained_set_dict = {}
 for key in clusters.keys():
     if len(clusters[key]) == 1:
         point = clusters[key][0]
@@ -280,7 +279,7 @@ for key in retained_set_dict.keys():
 fout.write("The intermediate results:\n")
 output_intermediate(fout, 0)
 
-# Step 7. Load another 20% of the data randomly.
+# Step 7. Load another 20% of the data.
 final_round = 4
 for num_round in range(1, 5):
     start_index = end_index
@@ -313,13 +312,13 @@ for num_round in range(1, 5):
         x = new_points_array[i]
         point = x.astype(np.float)
         index = pctr_index_map[last_ctr + i]
-        closest_clusterid = get_nearest_cluster_id(discard_set)
+        closest_clusterid = get_nearest_cluster_id(point, discard_set)
 
         if closest_clusterid > -1:
             # Step 8
             update_summary(discard_set, index, point, closest_clusterid)
         else:
-            closest_clusterid = get_nearest_cluster_id(compression_set)
+            closest_clusterid = get_nearest_cluster_id(point, compression_set)
             if closest_clusterid > -1:
                 # Step 9
                 update_summary(compression_set, index, point, closest_clusterid)
@@ -380,8 +379,8 @@ for num_round in range(1, 5):
 output_cluster_info(fout, discard_set, compression_set, retained_set_dict)
 fout.close()
 
-clustered_data = np.array(clustered_data)
-score = normalized_mutual_info_score(ground_truth[:, 1], clustered_data[:, 1])
-print("Normalized Score: ", score)
+# clustered_data = np.array(clustered_data)
+# score = normalized_mutual_info_score(ground_truth[:, 1], clustered_data[:, 1])
+# print("Normalized Score: ", score)
 
 print("Duration : ", time.time() - start_time)
