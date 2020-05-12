@@ -23,33 +23,33 @@
         <tbody>
           <tr>
             <td>1</td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/blob/master/DM-Assignments-3.6/Assignment1/Assignment1.pdf">Data Exploration</a></td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/tree/master/DM-Assignments-3.6/Assignment1">Code</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/blob/gh-pages/Python//Assignment1/Assignment1.pdf">Data Exploration</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment1">Code</a></td>
           </tr>
           <tr>
             <td>2</td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/blob/master/DM-Assignments-3.6/Assignment2/Assignment2.pdf">SON ALgorithm</a></td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/tree/master/DM-Assignments-3.6/Assignment2">Code</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/blob/gh-pages/Python//Assignment2/Assignment2.pdf">SON ALgorithm</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment2">Code</a></td>
           </tr>
           <tr>
             <td>3</td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/blob/master/DM-Assignments-3.6/Assignment3/Assignment3.pdf">LSH and Collaborative Filtering</a></td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/tree/master/DM-Assignments-3.6/Assignment3">Code</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/blob/gh-pages/Python//Assignment3/Assignment3.pdf">LSH and Collaborative Filtering</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment3">Code</a></td>
           </tr>
           <tr>
             <td>4</td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/blob/master/DM-Assignments-3.6/Assignment4/Assignment4.pdf">Girvan-Newman Algorithm</a></td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/tree/master/DM-Assignments-3.6/Assignment4">Code</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/blob/gh-pages/Python//Assignment4/Assignment4.pdf">Girvan-Newman Algorithm</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment4">Code</a></td>
           </tr>
           <tr>
             <td>5</td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/blob/master/DM-Assignments-3.6/Assignment5/Assignment5.pdf">Bloom Filtering, Flajolet-Martin, Fixed Size Sample</a></td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/tree/master/DM-Assignments-3.6/Assignment5">Code</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/blob/gh-pages/Python//Assignment5/Assignment5.pdf">Bloom Filtering, Flajolet-Martin, Fixed Size Sample</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment5">Code</a></td>
           </tr>
           <tr>
             <td>6</td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/blob/master/DM-Assignments-3.6/Assignment6/Assignment6.pdf">BFR ALgorithm</a></td>
-            <td><a href="https://github.com/jhadpk/INF553-assignments/tree/master/DM-Assignments-3.6/Assignment6">Code</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/blob/gh-pages/Python//Assignment6/Assignment6.pdf">BFR ALgorithm</a></td>
+            <td><a href="https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment6">Code</a></td>
           </tr>
         </tbody>
       </table>
