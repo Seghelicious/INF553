@@ -1,3 +1,7 @@
+### Foundations and Applications of Data Mining
+
+##### Spring 2020
+
 |  Assignment |  Description |  Code |
 |---|---|---|
 | 1 |[Data Exploration](https://github.com/jhadpk/INF553/blob/gh-pages/Python/Assignment1/Assignment1.pdf) | [Code](https://github.com/jhadpk/INF553/tree/gh-pages/Python/Assignment1) |
